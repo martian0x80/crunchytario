@@ -595,7 +595,7 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
             this.scrollToComment(r.comment.id);
 
             // Log to the webhook
-            this.logCommentToWebhook(r.comment, r.commenter.name, this.apiService.getAvatarUrl(r.commenter.id, 'L'), `${document.URL}#comentario-${r.comment.id}`);
+            this.logCommentToWebhook(r.comment, r.commenter.name, this.apiService.getAvatarUrl(r.commenter.id, 'L'), `${window.location.origin}${this.pagePath}#comentario-${r.comment.id}`);
         }
     }
 
@@ -618,7 +618,8 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
         this.cancelCommentEdits();
 
         // Log the comment
-        await this.logCommentToWebhook(r.comment, c.authorName || 'Anonymous', this.apiService.getAvatarUrl(c.userEdited || '', 'L'), `${document.URL}#comentario-${r.comment.id}`);
+        // TODO: get author name for registered users
+        await this.logCommentToWebhook(r.comment, r.comment.authorName || 'Anonymous', r.comment.userEdited ? this.apiService.getAvatarUrl(r.comment.userEdited, 'L') : null, `${window.location.origin}${this.pagePath}#comentario-${r.comment.id}`);
     }
 
     /**
