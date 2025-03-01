@@ -13,11 +13,13 @@
     .comentario-btn-tool {
         --cmntr-btn-color: var(--cmntr-muted-color);
 
-        margin: 0;
+        margin: 3px;
         padding: 0;
         width: 32px;
         height: 32px;
-        opacity: 0.5;
+        opacity: 1;
+        border: 0;
+        border-radius: 0.5rem;
 
         &.comentario-btn-lg {
             width: 40px;
@@ -31,7 +33,7 @@
     }
 
     &.comentario-disabled {
-        background-color: var(--cmntr-bg-shade);
+        background-color: transparent;
 
         .comentario-btn-tool {
             pointer-events: none;

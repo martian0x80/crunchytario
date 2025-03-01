@@ -15,10 +15,13 @@
     }
 
     .comentario-comment-editor-preview {
-        min-height: 130px; // Consistent with the min-height of a textarea
-        padding: 8px;
-        border: 1px solid colours.$violet-2;
-        border-radius: 3px;
+	    min-height: 55px;
+		padding: 15px;
+	    border: 1px solid colours.$gray-7;
+	    border-radius: 8px;
+	    min-width: fit-content;
+	    width: 99%;
+	    font-size: 16px;
 
         @include mixins.comment-text();
     }

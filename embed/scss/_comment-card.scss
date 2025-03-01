@@ -53,7 +53,7 @@
         width: 100%;
         flex-wrap: wrap;
         align-items: start;
-        margin-bottom: 6px;
+        margin-bottom: -3px;
     }
 
     .comentario-name-container {
@@ -140,7 +140,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    color: var(--cmntr-bg);
+    color: transparent;
     font-size: 20px;
     margin-right: 10px;
     border: 0 transparent;

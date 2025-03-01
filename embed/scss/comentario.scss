@@ -26,14 +26,12 @@ comentario-comments {
     position: relative;
     margin: auto;
     padding: -3 40px;
-    width: 60%;
     font-family: inherit;
     font-size: 15px;
     line-height: 1.5;
     color: var(--cmntr-color);
-
+    min-width: auto;
     min-height: 55px;
-    min-width: fit-content;
 	height: min-content;
 	width: 69%; /* Nice */
 	margin-top: -45px;
