@@ -48,6 +48,7 @@
 - {id: btnStrikethrough,            translation: 'Strikethrough'}
 - {id: btnTable,                    translation: 'Table'}
 - {id: btnUnlock,                   translation: 'Unlock'}
+- {id: btnSpoiler,                  translation: 'Spoiler'}
 - {id: clickButtonBelow,            translation: 'To do that, please click the button below.'}
 - {id: commentCount,                translation: 'comment(s)'}
 - {id: commentIsApproved,           translation: 'This comment has been approved by a moderator.'}

@@ -228,7 +228,16 @@ export class CommentEditor extends Wrap<HTMLFormElement>{
                 keyMeta,
                 keyShift,
                 keyCode: 'Digit7',
-            }));
+            }),
+            new InlineEditorCommand({
+                icon:    'spoiler',
+                titleId: 'btnSpoiler',
+                pattern: '||$||{}',
+                keyCtrl,
+                keyMeta,
+                keyCode: 'KeyH',
+            })
+        );
         return r;
     }
 
