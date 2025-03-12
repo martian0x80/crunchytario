@@ -364,6 +364,11 @@ func LogError(f func() error, details string) {
 	}
 }
 
+func bmAllowClasses(p *bluemonday.Policy, element, class string, classes ...string) {
+	optionString := class + "|" + strings.Join(classes, "|")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(\s|` + optionString + `)+$`)).OnElements(element)
+}
+
 // MarkdownToHTML renders the provided markdown string as HTML
 func MarkdownToHTML(markdown string, links, images, tables bool) string {
 	// Create a new markdown parser/renderer
@@ -381,6 +386,8 @@ func MarkdownToHTML(markdown string, links, images, tables bool) string {
 	// Create a sanitizer policy
 	p := bluemonday.StrictPolicy()
 	p.AllowStandardAttributes()
+	p.AllowStyling()
+	bmAllowClasses(p, "span", "comentario-spoiler")
 	p.AllowStandardURLs()
 	p.AllowElements(
 		// Headings

@@ -35,7 +35,7 @@ func (n *SpoilerNode) Kind() gast.NodeKind {
 
 func (n *SpoilerNode) Attributes() []gast.Attribute {
 	return []gast.Attribute{
-		{Name: []byte("class"), Value: []byte("crunchy-comments-spoiler")},
+		{Name: []byte("class"), Value: []byte("comentario-spoiler")},
 	}
 }
 
