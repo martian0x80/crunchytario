@@ -139,28 +139,26 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
         // Load local configuration
         this.localConfig.load();
 
-        // If CSS isn't disabled altogether
-        if (this.cssOverride !== null) {
-            try {
-								if (this.cssOverride) {
-									console.log('✅ Local CSS file successfully loaded');
-								} else {
-									console.log('❌ Local CSS file failed to load');
+        // Load appropriate CSS
+        try {
+            if (this.cssOverride) {
+                // we have a local css override
+                const styleSheets = Array.from(document.styleSheets);
+                const commentStyles = styleSheets.find(sheet => sheet?.href?.includes('comentario-override.css'));
+                await this.cssLoad(commentStyles?.href || '');
 
-									// Begin by loading the stylesheet
-									await this.cssLoad(`${this.cdn}/comentario.css`);
-								}
-
-                // Load stylesheet override, if any
-                if (this.cssOverride) {
-                    const styleSheets = Array.from(document.styleSheets);
-                    const commentStyles = styleSheets.find(sheet => sheet?.href?.includes('comentario-override.css'));
-                    await this.cssLoad(commentStyles?.href || '');
+                console.log('✅ Local CSS file successfully loaded');
+            } else {
+                if (this.cssOverride !== false) {
+                    console.log('❌ Local CSS file failed to load');
                 }
-            } catch (e) {
-                // Do not block Comentario load on CSS load failure, but log the error to the console
-                console.error('Failed to load CSS:', e);
+
+                // Load the default stylesheet
+                await this.cssLoad(`${this.cdn}/comentario.css`);
             }
+        } catch (e) {
+            // Do not block Comentario load on CSS load failure, but log the error to the console
+            console.error(e);
         }
 
         // Set up the root content
