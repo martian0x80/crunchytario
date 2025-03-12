@@ -236,6 +236,7 @@ export class CommentEditor extends Wrap<HTMLFormElement>{
                 keyCtrl,
                 keyMeta,
                 keyCode: 'KeyH',
+                placeholder
             })
         );
         return r;
