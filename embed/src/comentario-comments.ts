@@ -13,7 +13,7 @@ import { WebSocketClient, WebSocketMessage } from './ws-client';
 import { I18nService } from './i18n';
 import { PopupBlockedDialog } from './popup-blocked-dialog';
 import { RssDialog } from './rss-dialog';
-import {SpoilerInteraction, CommentInteraction} from './comment-interaction';
+import { SpoilerInteraction, CommentInteraction } from './comment-interaction';
 
 /**
  * Web component implementing the <comentario-comments> element.
@@ -307,7 +307,7 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
     private createInteractions(): CommentInteraction[] {
         const i: SpoilerInteraction[] = [];
 
-        // TODO disable by setting from the backend
+        // TODO create setting to allow disabling this from the backend
         i.push(new SpoilerInteraction());
 
         return i;

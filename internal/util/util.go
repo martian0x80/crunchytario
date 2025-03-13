@@ -386,7 +386,6 @@ func MarkdownToHTML(markdown string, links, images, tables bool) string {
 	// Create a sanitizer policy
 	p := bluemonday.StrictPolicy()
 	p.AllowStandardAttributes()
-	p.AllowStyling()
 	bmAllowClasses(p, "span", "comentario-spoiler")
 	p.AllowStandardURLs()
 	p.AllowElements(

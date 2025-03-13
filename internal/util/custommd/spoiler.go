@@ -16,7 +16,7 @@ type SpoilerNode struct {
 	gast.BaseInline
 }
 
-// NewSpoilerNode returns a new Strikethrough node.
+// NewSpoilerNode returns a new SpoilerNode.
 func NewSpoilerNode() *SpoilerNode {
 	return &SpoilerNode{}
 }
@@ -64,7 +64,7 @@ var defaultSpoilerDelimiterProcessor = &spoilerDelimiterProcessor{}
 
 // ========================
 
-// spoilerParser is a parser for pipe spoilerDelimiters.
+// spoilerParser is a parser for pipe ('|') spoilerDelimiters.
 type spoilerParser struct {
 	ActiveSpoilerKey parser.ContextKey
 }
@@ -99,11 +99,11 @@ func cNode(node *parser.Delimiter, segment text.Segment) *parser.Delimiter {
 	return node
 }
 
-// SpoilerStatus is a status of spoiler parsing. (lets build a little state machine :D)
-type SpoilerStatus int
+// SpoilerState is a state of the parsing process of spoilers. (lets build a little state machine :D)
+type SpoilerState int
 
 const (
-	NoSpoiler SpoilerStatus = iota
+	NoSpoiler SpoilerState = iota
 	EmptySpoiler
 	NonEmptySpoiler
 )

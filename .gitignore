@@ -34,4 +34,3 @@ node_modules/
 
 # Misc
 .hugo_build.lock
-/resources/k8s/secrets_e2e.postgres.yaml

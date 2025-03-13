@@ -23,7 +23,7 @@ export class CommentEditor extends Wrap<HTMLFormElement>{
     /**
      * Create a new editor for editing comment text.
      * @param t Function for obtaining translated messages.
-     * @param interactions List of interactions to apply to the comment body (For Preview).
+     * @param interactions List of interactions to apply to the comment body (for preview mode).
      * @param parent Parent element to host the editor.
      * @param isEdit Whether it's adding a new comment (false) or editing an existing one (true).
      * @param initialText Initial text to insert into the editor.
@@ -243,8 +243,7 @@ export class CommentEditor extends Wrap<HTMLFormElement>{
                 keyMeta,
                 keyCode: 'KeyH',
                 placeholder
-            })
-        );
+            }));
         return r;
     }
 
