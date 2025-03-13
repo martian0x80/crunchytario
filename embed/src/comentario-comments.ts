@@ -13,6 +13,7 @@ import { WebSocketClient, WebSocketMessage } from './ws-client';
 import { I18nService } from './i18n';
 import { PopupBlockedDialog } from './popup-blocked-dialog';
 import { RssDialog } from './rss-dialog';
+import {SpoilerInteraction, CommentInteraction} from './comment-interaction';
 
 /**
  * Web component implementing the <comentario-comments> element.
@@ -69,6 +70,9 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
 
     /** Current page info as retrieved from the server. */
     private pageInfo?: PageInfo;
+
+    /** List of available interactions to apply to the comments. */
+    private commentInteractions: CommentInteraction[] = this.createInteractions();
 
     /**
      * Whether to ignore errors coming from the ApiClient. If false, every error will result in an error banner
@@ -294,6 +298,19 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
 
         // Load the messages
         return this.i18n.init(lang);
+    }
+
+    /**
+     * Create and return a list of applicable comment interactions.
+     * @private
+     */
+    private createInteractions(): CommentInteraction[] {
+        const i: SpoilerInteraction[] = [];
+
+        // TODO disable by setting from the backend
+        i.push(new SpoilerInteraction());
+
+        return i;
     }
 
     /**
@@ -952,26 +969,27 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
      */
     private makeCommentRenderingContext(): CommentRenderingContext {
         return {
-            root:               this.root,
-            parentMap:          this.parentMap,
-            commenters:         this.commenters,
-            principal:          this.principal,
-            commentSort:        this.localConfig.commentSort || 'ta',
-            canAddComments:     !this.pageInfo?.isReadonly && this.pageInfo!.hasAuthMethod(false),
-            ownCommentDeletion: !!this.pageInfo?.commentDeletionAuthor,
-            modCommentDeletion: !!this.pageInfo?.commentDeletionModerator,
-            ownCommentEditing:  !!this.pageInfo?.commentEditingAuthor,
-            modCommentEditing:  !!this.pageInfo?.commentEditingModerator,
-            maxLevel:           this.maxLevel,
-            enableVoting:       !!this.pageInfo?.enableCommentVoting,
-            t:                  this.i18n.t,
-            onGetAvatar:        user => this.createAvatarElement(user),
-            onModerate:         (card, approve) => this.moderateComment(card, approve),
-            onDelete:           card => this.deleteComment(card),
-            onEdit:             card => this.editComment(card),
-            onReply:            card => this.addComment(card),
-            onSticky:           card => this.stickyComment(card),
-            onVote:             (card, direction) => this.voteComment(card, direction),
+            root:                this.root,
+            parentMap:           this.parentMap,
+            commenters:          this.commenters,
+            commentInteractions: this.commentInteractions,
+            principal:           this.principal,
+            commentSort:         this.localConfig.commentSort || 'ta',
+            canAddComments:      !this.pageInfo?.isReadonly && this.pageInfo!.hasAuthMethod(false),
+            ownCommentDeletion:  !!this.pageInfo?.commentDeletionAuthor,
+            modCommentDeletion:  !!this.pageInfo?.commentDeletionModerator,
+            ownCommentEditing:   !!this.pageInfo?.commentEditingAuthor,
+            modCommentEditing:   !!this.pageInfo?.commentEditingModerator,
+            maxLevel:            this.maxLevel,
+            enableVoting:        !!this.pageInfo?.enableCommentVoting,
+            t:                   this.i18n.t,
+            onGetAvatar:         user => this.createAvatarElement(user),
+            onModerate:          (card, approve) => this.moderateComment(card, approve),
+            onDelete:            card => this.deleteComment(card),
+            onEdit:              card => this.editComment(card),
+            onReply:             card => this.addComment(card),
+            onSticky:            card => this.stickyComment(card),
+            onVote:              (card, direction) => this.voteComment(card, direction),
         };
     }
 
