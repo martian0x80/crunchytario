@@ -505,6 +505,7 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
         // Create a new editor
         this.editor = new CommentEditor(
             this.i18n.t,
+            this.commentInteractions,
             parentCard?.children || this.addCommentHost!,
             false,
             '',
@@ -525,6 +526,7 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
         // Create a new editor
         this.editor = new CommentEditor(
             this.i18n.t,
+            this.commentInteractions,
             card.expandBody!,
             true,
             card.comment.markdown!,

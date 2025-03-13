@@ -3,6 +3,7 @@ import { UIToolkit } from './ui-toolkit';
 import { AsyncProcWithArg, PageInfo, TranslateFunc } from './models';
 import { Utils } from './utils';
 import { BlockEditorCommand, EditorCommand, InlineEditorCommand } from './editor-command';
+import { CommentInteraction } from './comment-interaction';
 
 export type CommentEditorPreviewCallback = (markdown: string) => Promise<string>;
 
@@ -22,6 +23,7 @@ export class CommentEditor extends Wrap<HTMLFormElement>{
     /**
      * Create a new editor for editing comment text.
      * @param t Function for obtaining translated messages.
+     * @param interactions List of interactions to apply to the comment body (For Preview).
      * @param parent Parent element to host the editor.
      * @param isEdit Whether it's adding a new comment (false) or editing an existing one (true).
      * @param initialText Initial text to insert into the editor.
@@ -32,6 +34,7 @@ export class CommentEditor extends Wrap<HTMLFormElement>{
      */
     constructor(
         private readonly t: TranslateFunc,
+        private readonly interactions: CommentInteraction[],
         private readonly parent: Wrap<any>,
         isEdit: boolean,
         initialText: string,
@@ -110,6 +113,9 @@ export class CommentEditor extends Wrap<HTMLFormElement>{
             }
         }
         this.preview.html(html);
+        for (const interaction of this.interactions) {
+            interaction.apply(this.preview, this.t);
+        }
 
         // Update control states
         this.updateControls();
