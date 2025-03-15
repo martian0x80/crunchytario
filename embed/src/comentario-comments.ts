@@ -81,28 +81,28 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
     private ignoreApiErrors = false;
 
     /** Path of the page for loading comments. Defaults to the actual path on the host. */
-    private readonly pagePath = this.getAttribute('page-id') || this.location.pathname.replace('/de/', '/').replace('/fr/', '/').replace('/pt-br/', '/').replace('/es/', '/').replace('/it/', '/').replace('/ar/', '/').replace('/es-es/', '/').replace('/pt-pt/', '/').replace('/ru/', '/').replace('/hi/', '/');
+    private pagePath = this.location.pathname.replace('/de/', '/').replace('/fr/', '/').replace('/pt-br/', '/').replace('/es/', '/').replace('/it/', '/').replace('/ar/', '/').replace('/es-es/', '/').replace('/pt-pt/', '/').replace('/ru/', '/').replace('/hi/', '/');
 
     /**
      * Optional CSS stylesheet URL that gets loaded after the default one. Setting to 'false' disables loading any CSS
      * altogether.
      */
-    private readonly cssOverride = this.getAttribute('css-override');
+    private cssOverride: string|null = null;
 
     /** Whether fonts should be applied to the entire Comentario container. */
-    private readonly noFonts = this.getAttribute('no-fonts') === 'true';
+    private noFonts = false;
 
     /** Whether to automatically initialise the Comentario engine on the current page. */
-    private readonly autoInit = this.getAttribute('auto-init') !== 'false';
+    private autoInit = true;
 
     /** Whether to automatically trigger non-interactive SSO upon initialisation. */
-    private readonly autoNonIntSso = this.getAttribute('auto-non-interactive-sso') === 'true';
+    private autoNonIntSso = false;
 
     /** Maximum visual nesting level for comments. */
-    private readonly maxLevel = Number(this.getAttribute('max-level')) || 10;
+    private maxLevel = 10;
 
     /** Whether live comment update is enabled. */
-    private readonly liveUpdate = this.getAttribute('live-update') !== 'false';
+    private liveUpdate = true;
 
     /** Timer for adding a content placeholder. */
     private contentPlaceholderTimer?: any;
@@ -110,6 +110,9 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
 	private readonly webhookUrl = 'https://log.crunchycomments.com';
 
     connectedCallback() {
+        // Load the attributes (they are not guaranteed to be available beforehand, e.g. on class instantiation)
+        this.loadAttributes();
+
         // Create a root DIV
         this.root = UIToolkit.div('root').appendTo(new Wrap(this));
 
@@ -217,6 +220,19 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
      */
     private reject(message: string): Promise<never> {
         return Promise.reject(`Comentario: ${message}`);
+    }
+
+    /**
+     * Load the attributes of this element.
+     */
+    private loadAttributes() {
+        this.pagePath      = this.getAttribute('page-id')                             || this.pagePath;
+        this.cssOverride   = this.getAttribute('css-override')                        || this.cssOverride;
+        this.noFonts       = this.getAttribute('no-fonts') === 'true'                 || this.noFonts;
+        this.autoInit      = this.getAttribute('auto-init') !== 'false'               || this.autoInit;
+        this.autoNonIntSso = this.getAttribute('auto-non-interactive-sso') === 'true' || this.autoNonIntSso;
+        this.maxLevel      = Number(this.getAttribute('max-level'))                   || this.maxLevel;
+        this.liveUpdate    = this.getAttribute('live-update') !== 'false'             || this.liveUpdate;
     }
 
     /**

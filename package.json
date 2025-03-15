@@ -9,6 +9,7 @@
         "build": "npm run -w frontend build && npm run -w embed build && npm run -w docs build",
         "build:prod": "npm run -w frontend build:prod && npm run -w embed build:prod && npm run -w docs build:prod",
         "build:cr": "npm run -w frontend build:prod && npm run -w embed build:cr && npm run -w docs build:prod",
+        "build:cr:prod": "npm run -w frontend build:prod && npm run -w embed build:cr:prod && npm run -w docs build:prod",
         "cy": "cypress open --e2e --browser chrome",
         "cy:ci": "cypress run --config video=false",
         "generate": "npm run -w frontend generate",

@@ -15,8 +15,8 @@ const sass = gulpSass(dartSass);
 const { dest, parallel, src, watch } = gulp;
 
 /** Whether we're running in the production mode (default), development or building specifically for CR*/
-const isProd = ['production', 'crunchyroll'].includes((process.env.NODE_ENV || 'production').trim().toLowerCase());
-const isCrunchy = ((process.env.NODE_ENV || 'production').trim().toLowerCase() === 'crunchyroll');
+const isProd = (process.env.NODE_ENV || 'production').trim().toLowerCase() === 'production';
+const isCrunchy = (process.env.TARGET || 'general').trim().toLowerCase() === 'crunchyroll';
 const crunchyTemplateData = {
     Origin: "https://chat.crunchycomments.com",
     OriginPath: "/",
