@@ -9,12 +9,20 @@ import sourcemaps from 'gulp-sourcemaps';
 import cleanCss from 'gulp-clean-css';
 import gulpESLintNew from 'gulp-eslint-new';
 import webpack from 'webpack-stream';
+import template from 'gulp-template';
 
 const sass = gulpSass(dartSass);
 const { dest, parallel, src, watch } = gulp;
 
-/** Whether we're running in the production mode (default). */
-const isProd = ((process.env.NODE_ENV || 'production').trim().toLowerCase() === 'production');
+/** Whether we're running in the production mode (default), development or building specifically for CR*/
+const isProd = ['production', 'crunchyroll'].includes((process.env.NODE_ENV || 'production').trim().toLowerCase());
+const isCrunchy = ((process.env.NODE_ENV || 'production').trim().toLowerCase() === 'crunchyroll');
+const crunchyTemplateData = {
+    Origin: "https://chat.crunchycomments.com",
+    OriginPath: "/",
+    CdnPrefix: "https://chat.crunchycomments.com"
+}
+const crunchyTemplateFormat = { interpolate: /\[\[\[\.(.+?)]]]/gs }
 
 // Load and tweak Webpack config
 import webpackCfgJs from './webpack.config.js';
@@ -47,12 +55,14 @@ const compileCss = () =>
         .pipe(gif(!isProd, sourcemaps.write()))
         // Cleanup CSS in prod mode
         .pipe(gif(isProd, cleanCss()))
+        .pipe(gif(isCrunchy, template(crunchyTemplateData, crunchyTemplateFormat)))
         .pipe(dest(buildDir));
 
 /** Compile Typescript files. */
 const compileTypescript = () =>
     src('./src/index.ts')
         .pipe(webpack(webpackConfig))
+        .pipe(gif(isCrunchy, template(crunchyTemplateData, crunchyTemplateFormat)))
         .pipe(dest(buildDir));
 
 /** Run all build tasks in parallel. */
