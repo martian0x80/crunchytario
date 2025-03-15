@@ -44,10 +44,9 @@
         --cmntr-pending-border:       #{colours.$yellow-6};
         --cmntr-table-border:         #{colours.$gray-3};
 
-        // Same as dark theme for now will have to be changed if we want to use the light theme
-        --cmntr-spoiler-hidden:       #{colours.$gray-7};
-        --cmntr-spoiler-hover:        #{colours.$gray-6};
-        --cmntr-spoiler-revealed:     #{colours.$gray-8};
+        --cmntr-spoiler-hidden:       #{colours.$gray-3};
+        --cmntr-spoiler-hover:        #{colours.$gray-4};
+        --cmntr-spoiler-revealed:     #{colours.$gray-2};
 
     // Dark theme properties
     } @else {
