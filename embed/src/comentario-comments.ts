@@ -87,9 +87,7 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
      * Optional CSS stylesheet URL that gets loaded after the default one. Setting to 'false' disables loading any CSS
      * altogether.
      */
-
-    // This is only used for loading the override CSS stylesheet, so we can mess with it as needed.
-    private readonly cssOverride = document.querySelector('link[href*="comentario-override.css"]');
+    private readonly cssOverride = this.getAttribute('css-override');
 
     /** Whether fonts should be applied to the entire Comentario container. */
     private readonly noFonts = this.getAttribute('no-fonts') === 'true';
@@ -143,26 +141,20 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
         // Load local configuration
         this.localConfig.load();
 
-        // Load appropriate CSS
-        try {
-            if (this.cssOverride) {
-                // we have a local css override
-                const styleSheets = Array.from(document.styleSheets);
-                const commentStyles = styleSheets.find(sheet => sheet?.href?.includes('comentario-override.css'));
-                await this.cssLoad(commentStyles?.href || '');
-
-                console.log('✅ Local CSS file successfully loaded');
-            } else {
-                if (this.cssOverride !== false) {
-                    console.log('❌ Local CSS file failed to load');
-                }
-
-                // Load the default stylesheet
+        // If CSS isn't disabled altogether
+        if (this.cssOverride !== 'false') {
+            try {
+                // Begin by loading the stylesheet
                 await this.cssLoad(`${this.cdn}/comentario.css`);
+
+                // Load stylesheet override, if any
+                if (this.cssOverride) {
+                    await this.cssLoad(this.cssOverride);
+                }
+            } catch (e) {
+                // Do not block Comentario load on CSS load failure, but log the error to the console
+                console.error(e);
             }
-        } catch (e) {
-            // Do not block Comentario load on CSS load failure, but log the error to the console
-            console.error(e);
         }
 
         // Set up the root content
