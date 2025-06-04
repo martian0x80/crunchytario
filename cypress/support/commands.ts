@@ -450,7 +450,7 @@ Cypress.Commands.add(
         // Reload the page
         cy.reload();
 
-        // Wait for hte app to settle
+        // Wait for the app to settle
         cy.wait(100);
 
         // Verify we're still on the same page
