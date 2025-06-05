@@ -161,11 +161,10 @@ func (svc *webSocketsService) addClient(c *wsClient) {
 }
 
 // error writes an error header using the provided response
+// NB: even though the response gets properly written out, the status isn't readable on the client-side socket due to
+// security considerations
 func (svc *webSocketsService) error(w http.ResponseWriter, code int) {
-	// Respond with "Too Many Requests" for simplicity (status isn't readable on the client due to
-	// security considerations anyway)
 	http.Error(w, http.StatusText(code), code)
-
 }
 
 // removeClient removes a registered client

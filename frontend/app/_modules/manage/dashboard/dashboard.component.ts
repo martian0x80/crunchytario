@@ -28,6 +28,9 @@ export class DashboardComponent implements OnInit {
     /** Currently authenticated principal. */
     readonly principal = this.principalSvc.principal;
 
+    /** Number of days to request. */
+    readonly numDays = this.configSvc.staticConfig.pageViewStatsMaxDays;
+
     /** User's total figures, displayed as metric cards. */
     totals?: StatsTotals;
 
@@ -69,12 +72,12 @@ export class DashboardComponent implements OnInit {
                         t.countDomainsOwned + t.countDomainsModerated + t.countDomainsCommenter + t.countDomainsReadonly > 0;
 
                     // Fetch domain page stats
-                    return this.api.dashboardDailyStats('domainPages');
+                    return this.api.dashboardDailyStats('domainPages', this.numDays);
                 }),
                 concatMap(p => {
                     this.domainPageCounts = p;
                     // Fetch domain user stats
-                    return this.api.dashboardDailyStats('domainUsers');
+                    return this.api.dashboardDailyStats('domainUsers', this.numDays);
                 }),
                 tap(u => this.domainUserCounts = u),
             )

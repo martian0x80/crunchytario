@@ -9,6 +9,7 @@ import { NoDataComponent } from '../../../tools/no-data/no-data.component';
 import { PieStatsChartComponent } from '../pie-stats-chart/pie-stats-chart.component';
 import { TopPagesStatsComponent } from '../top-pages-stats/top-pages-stats.component';
 import { LoaderDirective } from '../../../tools/_directives/loader.directive';
+import { ConfigService } from '../../../../_services/config.service';
 
 type DailyMetric = 'views' | 'comments';
 type PageViewDimension = 'country' | 'device' | 'browser' | 'os';
@@ -31,8 +32,8 @@ export class StatsComponent {
     /** ID of the domain to collect the statistics for. If '', statistics for all domains of the current user is collected. */
     readonly domainId = input<string | undefined>();
 
-    /** Number of days of statistics to request from the backend. */
-    readonly numberOfDays = input<number>();
+    /** Number of days of statistics to request from the backend. Defaults to the stats retention period configured on the backend */
+    readonly numberOfDays = input<number>(this.configSvc.staticConfig.pageViewStatsMaxDays);
 
     // Daily stats data
     totalCounts?: Partial<Record<DailyMetric, number>>;
@@ -55,6 +56,7 @@ export class StatsComponent {
 
     constructor(
         private readonly api: ApiGeneralService,
+        private readonly configSvc: ConfigService,
     ) {
         // Initially load the stats, and reload on a property change
         effect(() => this.reload());

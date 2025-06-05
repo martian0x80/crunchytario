@@ -22,8 +22,6 @@ const (
 	DBMaxAttempts = 10 // Max number of attempts to connect to the database
 
 	ResultPageSize = 25 // Max number of database rows to return
-
-	MaxNumberStatsDays = 30 // Max number of days to get statistics for
 )
 
 // Cookie names
@@ -51,7 +49,6 @@ const (
 	LangCookieDuration       = 365 * OneDay     // How long the language cookie stays valid
 	UserConfirmEmailDuration = 3 * OneDay       // How long the token in the confirmation email stays valid
 	UserPwdResetDuration     = 12 * time.Hour   // How long the token in the password-reset email stays valid
-	PageViewRetentionPeriod  = 32 * OneDay      // How long a page view stats record is retained
 	AvatarFetchTimeout       = 5 * time.Second  // Timeout for fetching external avatars
 	ConfigCacheTTL           = 30 * time.Second // TTL for cached configs
 	AttrCacheTTL             = 10 * time.Second // TTL for cached attributes

@@ -17,22 +17,22 @@ import (
 type StatsService interface {
 	// GetDailyCommentCounts collects and returns a daily statistics for comments, optionally limited to a specific
 	// domain
-	GetDailyCommentCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays int) ([]uint64, error)
+	GetDailyCommentCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays uint64) ([]uint64, error)
 	// GetDailyDomainPageCounts collects and returns a daily statistics for domain pages, optionally limited to a
 	// specific domain
-	GetDailyDomainPageCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays int) ([]uint64, error)
+	GetDailyDomainPageCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays uint64) ([]uint64, error)
 	// GetDailyDomainUserCounts collects and returns a daily statistics for domain users, optionally limited to a
 	// specific domain
-	GetDailyDomainUserCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays int) ([]uint64, error)
+	GetDailyDomainUserCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays uint64) ([]uint64, error)
 	// GetDailyViewCounts collects and returns a daily statistics for views, optionally limited to a specific domain
-	GetDailyViewCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays int) ([]uint64, error)
+	GetDailyViewCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays uint64) ([]uint64, error)
 	// GetTopPages collects and returns top num performing page items by the given property prop (either "views" or
 	// "comments")
-	GetTopPages(isSuperuser bool, prop string, userID, domainID *uuid.UUID, numDays, num int) ([]*exmodels.PageStatsItem, error)
+	GetTopPages(isSuperuser bool, prop string, userID, domainID *uuid.UUID, numDays, num uint64) ([]*exmodels.PageStatsItem, error)
 	// GetTotals collects and returns total figures for all domains accessible to the specified user
 	GetTotals(curUser *data.User) (*StatsTotals, error)
 	// GetViewStats returns view numbers for the given dimension values, optionally limited to a specific domain
-	GetViewStats(isSuperuser bool, dimension string, userID, domainID *uuid.UUID, numDays int) (exmodels.StatsDimensionCounts, error)
+	GetViewStats(isSuperuser bool, dimension string, userID, domainID *uuid.UUID, numDays uint64) (exmodels.StatsDimensionCounts, error)
 	// MovePageViews moves all page views from the source to the target page
 	MovePageViews(sourcePageID, targetPageID *uuid.UUID) error
 }
@@ -42,7 +42,7 @@ type StatsService interface {
 // statsService is a blueprint StatsService implementation
 type statsService struct{ dbTxAware }
 
-func (svc *statsService) GetDailyCommentCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays int) ([]uint64, error) {
+func (svc *statsService) GetDailyCommentCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays uint64) ([]uint64, error) {
 	logger.Debugf("statsService.GetDailyCommentCounts(%v, %s, %s, %d)", isSuperuser, userID, domainID, numDays)
 
 	// Calculate the start date
@@ -74,7 +74,7 @@ func (svc *statsService) GetDailyCommentCounts(isSuperuser bool, userID, domainI
 	return svc.queryDailyStats(q, start, numDays)
 }
 
-func (svc *statsService) GetDailyDomainUserCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays int) ([]uint64, error) {
+func (svc *statsService) GetDailyDomainUserCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays uint64) ([]uint64, error) {
 	logger.Debugf("statsService.GetDailyDomainUserCounts(%v, %s, %s, %d)", isSuperuser, userID, domainID, numDays)
 
 	// Calculate the start date
@@ -105,7 +105,7 @@ func (svc *statsService) GetDailyDomainUserCounts(isSuperuser bool, userID, doma
 	return svc.queryDailyStats(q, start, numDays)
 }
 
-func (svc *statsService) GetDailyDomainPageCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays int) ([]uint64, error) {
+func (svc *statsService) GetDailyDomainPageCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays uint64) ([]uint64, error) {
 	logger.Debugf("statsService.GetDailyDomainPageCounts(%v, %s, %s, %d)", isSuperuser, userID, domainID, numDays)
 
 	// Calculate the start date
@@ -136,7 +136,7 @@ func (svc *statsService) GetDailyDomainPageCounts(isSuperuser bool, userID, doma
 	return svc.queryDailyStats(q, start, numDays)
 }
 
-func (svc *statsService) GetDailyViewCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays int) ([]uint64, error) {
+func (svc *statsService) GetDailyViewCounts(isSuperuser bool, userID, domainID *uuid.UUID, numDays uint64) ([]uint64, error) {
 	logger.Debugf("statsService.GetDailyViewCounts(%v, %s, %s, %d)", isSuperuser, userID, domainID, numDays)
 
 	// Return a nil slice unless stats gathering is enabled
@@ -173,7 +173,7 @@ func (svc *statsService) GetDailyViewCounts(isSuperuser bool, userID, domainID *
 	return svc.queryDailyStats(q, start, numDays)
 }
 
-func (svc *statsService) GetTopPages(isSuperuser bool, prop string, userID, domainID *uuid.UUID, numDays, num int) ([]*exmodels.PageStatsItem, error) {
+func (svc *statsService) GetTopPages(isSuperuser bool, prop string, userID, domainID *uuid.UUID, numDays, num uint64) ([]*exmodels.PageStatsItem, error) {
 	logger.Debugf("statsService.GetTopPages(%v, %q, %s, %s, %d, %d)", isSuperuser, prop, userID, domainID, numDays, num)
 
 	// Return a nil slice unless stats gathering is enabled
@@ -267,7 +267,7 @@ func (svc *statsService) GetTotals(curUser *data.User) (*StatsTotals, error) {
 	// Succeeded
 	return totals, nil
 }
-func (svc *statsService) GetViewStats(isSuperuser bool, dimension string, userID, domainID *uuid.UUID, numDays int) (exmodels.StatsDimensionCounts, error) {
+func (svc *statsService) GetViewStats(isSuperuser bool, dimension string, userID, domainID *uuid.UUID, numDays uint64) (exmodels.StatsDimensionCounts, error) {
 	logger.Debugf("statsService.GetViewStats(%v, %q, %s, %s, %d)", isSuperuser, dimension, userID, domainID, numDays)
 
 	// Return a nil slice unless stats gathering is enabled
@@ -490,7 +490,7 @@ func (svc *statsService) fillUserStats(totals *StatsTotals) error {
 }
 
 // queryDailyStats collects and returns a daily statistics using the provided database rows
-func (svc *statsService) queryDailyStats(ds *goqu.SelectDataset, start time.Time, num int) ([]uint64, error) {
+func (svc *statsService) queryDailyStats(ds *goqu.SelectDataset, start time.Time, num uint64) ([]uint64, error) {
 	// Query the data
 	var dbRecs []struct {
 		// The date has to be fetched as a string and parsed afterwards due to SQLite3 limitation on type detection when
@@ -526,7 +526,7 @@ func (svc *statsService) queryDailyStats(ds *goqu.SelectDataset, start time.Time
 	}
 
 	// Add missing rows up to the requested number (fill any gap at the end)
-	for len(res) < num {
+	for uint64(len(res)) < num {
 		res = append(res, 0)
 	}
 
@@ -542,14 +542,14 @@ func addStatsOwnedDomainFilter(q *goqu.SelectDataset, userID *uuid.UUID) *goqu.S
 }
 
 // getStatsStartDate returns a corrected number of stats days and the corresponding start date
-func getStatsStartDate(numDays int) (int, time.Time) {
+func getStatsStartDate(numDays uint64) (uint64, time.Time) {
 	// Correct the number of days if needed
-	if numDays > util.MaxNumberStatsDays {
-		numDays = util.MaxNumberStatsDays
+	if numDays > config.ServerConfig.StatsMaxDays {
+		numDays = config.ServerConfig.StatsMaxDays
 	}
 
 	// Start date is today minus (numDays-1)
-	return numDays, time.Now().UTC().Truncate(util.OneDay).AddDate(0, 0, -numDays+1)
+	return numDays, time.Now().UTC().Truncate(util.OneDay).AddDate(0, 0, -int(numDays)+1)
 }
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import { ApiGeneralService } from '../../../../../generated-api';
 import { DailyStatsChartComponent } from '../daily-stats-chart/daily-stats-chart.component';
 import { PieStatsChartComponent } from '../pie-stats-chart/pie-stats-chart.component';
 import { TopPagesStatsComponent } from '../top-pages-stats/top-pages-stats.component';
+import { mockConfigService } from '../../../../_utils/_mocks.spec';
 
 describe('StatsComponent', () => {
 
@@ -19,6 +20,7 @@ describe('StatsComponent', () => {
                 ],
                 providers: [
                     MockProvider(ApiGeneralService),
+                    mockConfigService(),
                 ],
             })
             .compileComponents();

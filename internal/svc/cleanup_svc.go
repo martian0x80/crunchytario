@@ -3,6 +3,7 @@ package svc
 import (
 	"database/sql"
 	"github.com/doug-martin/goqu/v9"
+	"gitlab.com/comentario/comentario/internal/config"
 	"gitlab.com/comentario/comentario/internal/persistence"
 	"gitlab.com/comentario/comentario/internal/util"
 	"sync"
@@ -115,8 +116,10 @@ func (svc *cleanupService) cleanupExpiredUserSessions() persistence.Executable {
 
 // cleanupStalePageViews removes stale page view stats from the database
 func (svc *cleanupService) cleanupStalePageViews() persistence.Executable {
+	// Retain pageviews for a day longer than max. number of days to account for date changes
+	retainFor := util.OneDay * time.Duration(config.ServerConfig.StatsMaxDays+1)
 	return svc.dbx().Delete("cm_domain_page_views").
-		Where(goqu.I("ts_created").Lt(time.Now().UTC().Add(-util.PageViewRetentionPeriod)))
+		Where(goqu.I("ts_created").Lt(time.Now().UTC().Add(-retainFor)))
 }
 
 // updateDomainCommentCounts ensures the number of comments for each domain is correct

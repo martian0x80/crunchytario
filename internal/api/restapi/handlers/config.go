@@ -120,6 +120,7 @@ func ConfigGet(api_general.ConfigGetParams) middleware.Responder {
 				HomeContentURL:       strfmt.URI(config.ServerConfig.HomeContentURL),
 				LiveUpdateEnabled:    svc.Services.WebSocketsService().Active(),
 				PageViewStatsEnabled: !config.ServerConfig.DisablePageViewStats,
+				PageViewStatsMaxDays: uint64(config.ServerConfig.StatsMaxDays),
 				PrivacyPolicyURL:     config.ServerConfig.PrivacyPolicyURL,
 				ResultPageSize:       util.ResultPageSize,
 				ServerTime:           strfmt.DateTime(time.Now().UTC()),

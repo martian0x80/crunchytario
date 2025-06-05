@@ -74,6 +74,7 @@ context('Config Manager', () => {
                 ['Max. number of items per page',           '25'],
                 ['Live update enabled',                     '✔'],
                 ['Page view statistics enabled',            '✔'],
+                ['Max. number of days in statistics',       '30'],
                 ['Available UI languages',                  Object.entries(UI_LANGUAGES).map(([k, v]) => k+v)],
                 ['Enabled extensions',                      ['Akismet', 'APILayer SpamChecker', 'Perspective']],
             ]);

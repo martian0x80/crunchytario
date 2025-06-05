@@ -26,6 +26,7 @@ export const mockConfigService = () => MockProvider(
             uiLanguages:          [{id: 'en', nameEnglish: 'English', nameNative: 'English', isFrontendLanguage: true}],
             liveUpdateEnabled:    true,
             pageViewStatsEnabled: true,
+            pageViewStatsMaxDays: 42,
         },
         pluginConfig: {
             plugins: [],

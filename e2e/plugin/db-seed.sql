@@ -296,7 +296,7 @@ values
 
 insert into cm_domain_page_views (page_id, ts_created, proto, ip, country, ua_browser_name, ua_browser_version, ua_os_name, ua_os_version, ua_device)
 values
-    ('0ebb8a1b-12f6-421e-b1bb-75867ac480c7', '2020-06-23 17:21:53.002826',                   'HTTP/1.1', '10.20.x.x',   'US', 'Chrome',    '317.2320.97', 'MacOSX',  '10.15.1', 'Computer'),
+    ('0ebb8a1b-12f6-421e-b1bb-75867ac480c7', SEED_NOW('-45 days'),         'HTTP/1.1', '10.20.x.x',   'US', 'Chrome',    '317.2320.97', 'MacOSX',  '10.15.1', 'Computer'),
     ('0ebb8a1b-12f6-421e-b1bb-75867ac480c7', SEED_NOW('-1909752 seconds'), 'HTTP/1.1', '199.239.x.x', 'BR', 'Firefox',   '113.0.0',     'Linux',   '0.0.0',   'Computer'),
     ('0ebb8a1b-12f6-421e-b1bb-75867ac480c7', SEED_NOW('-1905443 seconds'), 'HTTP/1.1', '199.239.x.x', 'BR', 'Firefox',   '113.0.0',     'Linux',   '0.0.0',   'Computer'),
     ('0ebb8a1b-12f6-421e-b1bb-75867ac480c7', SEED_NOW('-1905311 seconds'), 'HTTP/1.1', '127.14.x.x',  'NL', 'Chrome',    '118.0.0',     'Linux',   '0.0.0',   'Computer'),

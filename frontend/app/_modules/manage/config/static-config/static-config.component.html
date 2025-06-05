@@ -97,7 +97,7 @@
     <!-- Max. number of items per page -->
     <div>
         <dt i18n>Max. number of items per page</dt>
-        <dd>{{ cfg.resultPageSize }}</dd>
+        <dd>{{ cfg.resultPageSize | number }}</dd>
     </div>
     <!-- Live update enabled -->
     <div>
@@ -108,6 +108,11 @@
     <div>
         <dt i18n>Page view statistics enabled</dt>
         <dd><app-checkmark [value]="cfg.pageViewStatsEnabled"/></dd>
+    </div>
+    <!-- Max. number of days in statistics -->
+    <div>
+        <dt i18n>Max. number of days in statistics</dt>
+        <dd>{{ cfg.pageViewStatsMaxDays | number }}</dd>
     </div>
     <!-- Available UI languages -->
     <div>

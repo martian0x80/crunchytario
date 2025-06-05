@@ -668,6 +668,7 @@ definitions:
       - resultPageSize
       - liveUpdateEnabled
       - pageViewStatsEnabled
+      - pageViewStatsMaxDays
     properties:
       baseUrl:
         type: string
@@ -738,6 +739,12 @@ definitions:
         x-omitempty: false
         x-isnullable: false
         description: Whether page view statistics gathering and reporting is enabled
+      pageViewStatsMaxDays:
+        type: integer
+        format: uint
+        x-omitempty: false
+        x-isnullable: false
+        description: Maximum number of days page view statistics gets retained for
 
   keyValueMap:
     description: Map of key-value strings
@@ -1707,7 +1714,6 @@ parameters:
     type: integer
     format: uint
     minimum: 1
-    maximum: 30
     default: 30
     description: Number of days to get statistics for
 

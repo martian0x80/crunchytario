@@ -11,7 +11,7 @@ import (
 
 func DashboardDailyStats(params api_general.DashboardDailyStatsParams, user *data.User) middleware.Responder {
 	// Extract and parse the parameters
-	numDays := int(swag.Uint64Value(params.Days))
+	numDays := swag.Uint64Value(params.Days)
 	domainID, r := parseUUIDPtr(params.Domain)
 	if r != nil {
 		return r
@@ -49,7 +49,7 @@ func DashboardDailyStats(params api_general.DashboardDailyStatsParams, user *dat
 
 func DashboardPageStats(params api_general.DashboardPageStatsParams, user *data.User) middleware.Responder {
 	// Extract and parse the parameters
-	numDays := int(swag.Uint64Value(params.Days))
+	numDays := swag.Uint64Value(params.Days)
 	domainID, r := parseUUIDPtr(params.Domain)
 	if r != nil {
 		return r
@@ -78,7 +78,7 @@ func DashboardPageStats(params api_general.DashboardPageStatsParams, user *data.
 
 func DashboardPageViewStats(params api_general.DashboardPageViewStatsParams, user *data.User) middleware.Responder {
 	// Extract and parse the parameters
-	numDays := int(swag.Uint64Value(params.Days))
+	numDays := swag.Uint64Value(params.Days)
 	domainID, r := parseUUIDPtr(params.Domain)
 	if r != nil {
 		return r
