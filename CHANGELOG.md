@@ -1,5 +1,41 @@
 # Comentario changelog
 
+## v3.14.0 Hamiltonsbawn
+
+This version introduces database transaction support, which ensures DB integrity after each operation, domain page delete and merge functions, persisted sort settings in lists, configurable statistics retention period, and numerous UI improvements.
+
+### Changes
+
+* Add `--stats-max-days` CLI option, static config param (#178) - 1c2ccbe3
+* Data import: mark imported user's email confirmed if it's a real one - 123f2d02, ea37ea3e
+* Admin UI: page data move function (#174) - 83e8d289, 67524de9, e9082fb1, ba7235a9
+* Admin UI: domain page deletion function (#176) - 41330e9f, 969b4c74, a123689c, 4bd491ce
+* Add *Show login dialog for unauthenticated users* domain setting (#154) - b87acf0d
+* Admin UI: user props: put *Unlock* next to other buttons - 17869163
+* Admin UI: user props: add number of owned domains - f9fd1a51
+* Admin UI: allow owners to edit page title (#175), but disallow for moderators - 5b1befeb
+* Admin UI: persist sort settings (#168) - c712ce64, b8c8a7a4
+* Admin UI: sort selector: display current sort on button - 140b7d93
+* Admin UI: add domain count to user/domain user list; fix plurals in comment/view counts - 38703d96
+* Admin UI: user avatar: fix vertical alignment - cdd32959, 8ddbb26c
+* Admin UI: migrate to Angular signals - f162bb03, 7586bd0f, 956d0a6d, 12c309d2, e29d9efc
+* Backend: enforce correct comment counts
+* Backend: add trusted origin for XSRF check ([CVE-2025-24358](https://nvd.nist.gov/vuln/detail/CVE-2025-24358), `gorilla/csrf` 1.7.3) - 467e614b
+* Backend: fix wrong message when non-SSO federated user tries to use SSO (#161) - 02b38529
+* Backend: fix the `superfluous response.WriteHeader call` warning in `webSocketsHandler` - f43ce57b
+* Backend: ignore non-`2xx` HTTP status codes when fetching page title - 74b23314
+* Backend: implement PostgreSQL SSL cert params (#170)  - 9c1ac689
+* Backend: streamline/unify/fix logging - 5c1852ca
+* Backend: retry cleanup indefinitely; log at `INFO` level - 2b340739
+* Backend: PL/pgSQL should use `ELSIF`, not `ELSEIF` - 55d30d36, ddc0892d
+* Backend: support for DB transactions - 9e499ec4, 77f2c4c5, 2a41873e, 4051f309, 3a755dea, 9907fe6b, f6269596
+* Docs: Contact: add callout about issue tracker - 4d9b6074
+* Go 1.24.3 and other dependencies update (#172) - d77c0368, 70407f1c, 0ecac7bf, 9c73706c, f2791d69, 175729fc, c575c31d, 467e614b
+* Plugin subsystem updates - b94ea379, 232b01c2, 331977eb, 809e71b5, ad137ab8, 910a6112, 858763ba
+* CI: Netlify config updates - 950cc5a6, 2901a7be
+* CI: upgrade to k8s 1.31 - 8aab853f, ba6a9ab1
+* I18n: add German translation (de) - 13650a2d
+
 ## v3.13.1 Glenarm
 
 This is a bugfix version:
