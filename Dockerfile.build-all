@@ -16,7 +16,7 @@
 #=======================================================================================================================
 
 ARG GO_VERSION=1.24
-ARG GOSWAGGER_VERSION=0.31.0
+ARG GOSWAGGER_VERSION=0.32.3
 ARG NODE_VERSION=22
 ARG OPENJDK_VERSION=21
 
