@@ -115,6 +115,7 @@
 - {id: statusEditedByModerator,     translation: 'editado por el moderador'}
 - {id: statusModerator,             translation: 'Moderador'}
 - {id: statusPending,               translation: 'Pendiente'}
+- {id: statusUnknownUser,           translation: 'Usuario desconocido'}
 - {id: stickyComment,               translation: 'Comentario anclado'}
 - {id: technicalDetails,            translation: 'Detalles técnicos'}
 - {id: timeJustNow,                 translation: 'justo ahora'}

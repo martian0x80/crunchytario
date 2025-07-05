@@ -23,9 +23,9 @@ export interface FederatedIdentityProvider {
 /** User abstraction. **/
 export interface User {
     readonly id:          UUID;    // Unique user ID
-    readonly email:       string;  // Email address of the user
+    readonly email?:      string;  // Email address of the user
     readonly name:        string;  // Full name of the user
-    readonly websiteUrl:  string;  // URL of the user's website
+    readonly websiteUrl?: string;  // URL of the user's website
     readonly hasAvatar:   boolean; // Whether the user has an avatar image
     readonly isModerator: boolean; // Whether the user is a moderator on this specific domain
     readonly isCommenter: boolean; // Whether the user is a commenter on this specific domain (false means the user is read-only)

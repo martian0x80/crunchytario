@@ -178,6 +178,7 @@ definitions:
       name:
         type: string
         description: Full name of the user
+        x-omitempty: false
       websiteUrl:
         type: string
         format: uri

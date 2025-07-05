@@ -115,6 +115,7 @@
 - {id: statusEditedByModerator,     translation: '由审核员编辑'}
 - {id: statusModerator,             translation: '审核员'}
 - {id: statusPending,               translation: '待审核'}
+- {id: statusUnknownUser,           translation: '未知用户'}
 - {id: stickyComment,               translation: '置顶评论'}
 - {id: technicalDetails,            translation: '技术细节'}
 - {id: timeJustNow,                 translation: '刚刚'}

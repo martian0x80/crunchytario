@@ -120,6 +120,7 @@
 - {id: statusEditedByModerator,     translation: 'изменён модератором'}
 - {id: statusModerator,             translation: 'Модератор'}
 - {id: statusPending,               translation: 'Ждёт модерации'}
+- {id: statusUnknownUser,           translation: 'Неизвестный пользователь'}
 - {id: stickyComment,               translation: 'Прилепленный комментарий.'}
 - {id: technicalDetails,            translation: 'Технические подробности'}
 - {id: timeJustNow,                 translation: 'только что'}

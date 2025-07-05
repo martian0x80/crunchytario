@@ -123,6 +123,7 @@
 - {id: statusEditedByModerator,     translation: 'edited by moderator'}
 - {id: statusModerator,             translation: 'Moderator'}
 - {id: statusPending,               translation: 'Pending'}
+- {id: statusUnknownUser,           translation: 'Unknown User'}
 - {id: stickyComment,               translation: 'Sticky comment'}
 - {id: technicalDetails,            translation: 'Technical details'}
 - {id: timeJustNow,                 translation: 'just now'}

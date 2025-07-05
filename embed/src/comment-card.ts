@@ -345,6 +345,13 @@ export class CommentCard extends Wrap<HTMLDivElement> {
             .animated(ch => ch.hasClass('fade-out') && ch.classes('hidden'))
             .append(...CommentCard.renderChildComments(ctx, this.level + 1, id));
 
+        // Determine author name
+        let authName = c.authorName || commenter?.name;
+        if (!authName) {
+            // No name: if there's no commenter, it means the user is deleted; otherwise they have an empty name set
+            authName = '[' + this.t(commenter ? 'statusUnknownUser' : 'statusDeletedUser') + ']';
+        }
+
         // Card self
         this.eCardSelf = UIToolkit.div('card-self')
             // ID for highlighting/scrolling to
@@ -362,7 +369,7 @@ export class CommentCard extends Wrap<HTMLDivElement> {
                                     .append(
                                         // Name
                                         Wrap.new(commenter?.websiteUrl ? 'a' : 'div')
-                                            .inner(c.authorName || commenter?.name || `[${this.t('statusDeletedUser')}]`)
+                                            .inner(authName)
                                             .classes('name')
                                             .attr(commenter?.websiteUrl ?
                                                 {href: commenter.websiteUrl, rel: 'nofollow noopener noreferrer'} :

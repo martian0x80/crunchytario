@@ -947,8 +947,9 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
             case !user:
                 return UIToolkit.div('avatar', 'bg-deleted');
 
-            // If the user is anonymous
+            // If the user is anonymous or has an empty name (which is possible for imported users)
             case user!.id === ANONYMOUS_ID:
+            case !user!.name:
                 return UIToolkit.div('avatar', 'bg-anonymous');
 
             // If the user has an image avatar, create a new image pointing to the API avatar endpoint

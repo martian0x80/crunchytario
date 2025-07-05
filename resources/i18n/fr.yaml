@@ -115,6 +115,7 @@
 - {id: statusEditedByModerator,     translation: 'modifié par un modérateur'}
 - {id: statusModerator,             translation: 'Modérateur'}
 - {id: statusPending,               translation: 'En attente'}
+- {id: statusUnknownUser,           translation: 'Utilisateur inconnu'}
 - {id: stickyComment,               translation: 'Commentaire épinglé'}
 - {id: technicalDetails,            translation: 'Détails technique'}
 - {id: timeJustNow,                 translation: 'à l''instant'}
