@@ -20,7 +20,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/go-version v1.7.0
-	github.com/jellydator/ttlcache/v3 v3.3.0
+	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/justinas/alice v1.2.0
 	github.com/lib/pq v1.10.9
@@ -29,7 +29,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
-	github.com/phuslu/iploc v1.0.20250601
+	github.com/phuslu/iploc v1.0.20250702
 	github.com/yuin/goldmark v1.7.12
 	golang.org/x/crypto v0.39.0
 	golang.org/x/net v0.41.0
