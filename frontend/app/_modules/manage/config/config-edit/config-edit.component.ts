@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { KeyValuePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -29,6 +29,12 @@ import { ConfigSectionEditComponent } from '../config-section-edit/config-sectio
 })
 export class ConfigEditComponent implements OnInit {
 
+    private readonly router    = inject(Router);
+    private readonly fb        = inject(FormBuilder);
+    private readonly configSvc = inject(ConfigService);
+    private readonly api       = inject(ApiGeneralService);
+    private readonly toastSvc  = inject(ToastService);
+
     /** Config being edited. */
     config?: DynamicConfig;
 
@@ -37,14 +43,6 @@ export class ConfigEditComponent implements OnInit {
 
     readonly loading = new ProcessingStatus();
     readonly saving = new ProcessingStatus();
-
-    constructor(
-        private readonly router: Router,
-        private readonly fb: FormBuilder,
-        private readonly configSvc: ConfigService,
-        private readonly api: ApiGeneralService,
-        private readonly toastSvc: ToastService,
-    ) {}
 
     ngOnInit(): void {
         // Fetch the config

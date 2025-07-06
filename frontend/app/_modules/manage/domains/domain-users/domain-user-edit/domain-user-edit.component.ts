@@ -1,4 +1,4 @@
-import { Component, effect, input } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { EMPTY, switchMap } from 'rxjs';
@@ -29,6 +29,11 @@ import { DomainUserRoleBadgeComponent } from '../../../badges/domain-user-role-b
 })
 export class DomainUserEditComponent {
 
+    private readonly router            = inject(Router);
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+    private readonly toastSvc          = inject(ToastService);
+
     /** ID of the domain user to edit. */
     readonly id = input<string>();
 
@@ -43,20 +48,14 @@ export class DomainUserEditComponent {
 
     readonly loading = new ProcessingStatus();
     readonly saving  = new ProcessingStatus();
-    readonly form = this.fb.nonNullable.group({
-        role:                [DomainUserRole.Commenter, [Validators.required]],
+    readonly form = inject(FormBuilder).nonNullable.group({
+        role:                [DomainUserRole.Commenter as DomainUserRole, [Validators.required]],
         notifyReplies:       false,
         notifyModerator:     false,
         notifyCommentStatus: false,
     });
 
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly router: Router,
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly toastSvc: ToastService,
-    ) {
+    constructor() {
         // Load the domain user initially, and reload on changes
         effect(() => this.reload());
     }

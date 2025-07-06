@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, merge, mergeWith, Subject, switchMap, tap } from 'rxjs';
@@ -47,6 +47,10 @@ import { SortableViewSettings } from '../../_models/view';
 })
 export class UserManagerComponent implements OnInit {
 
+    private readonly api             = inject(ApiGeneralService);
+    private readonly configSvc       = inject(ConfigService);
+    private readonly localSettingSvc = inject(LocalSettingService);
+
     /** Loaded list of users. */
     users?: User[];
 
@@ -58,7 +62,7 @@ export class UserManagerComponent implements OnInit {
 
     readonly sort = new Sort(['email', 'name', 'created', 'federatedIdP'], 'email', false);
     readonly usersLoading = new ProcessingStatus();
-    readonly filterForm = this.fb.nonNullable.group({
+    readonly filterForm = inject(FormBuilder).nonNullable.group({
         filter: '',
     });
 
@@ -69,14 +73,9 @@ export class UserManagerComponent implements OnInit {
 
     private loadedPageNum = 0;
 
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly api: ApiGeneralService,
-        private readonly configSvc: ConfigService,
-        private readonly localSettingSvc: LocalSettingService,
-    ) {
+    constructor() {
         // Restore the view settings
-        localSettingSvc.load<SortableViewSettings>('userManager').subscribe(s => s?.sort && (this.sort.asString = s.sort));
+        this.localSettingSvc.load<SortableViewSettings>('userManager').subscribe(s => s?.sort && (this.sort.asString = s.sort));
     }
 
     ngOnInit(): void {

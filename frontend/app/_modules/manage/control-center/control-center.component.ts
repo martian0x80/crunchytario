@@ -1,23 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { AsyncPipe, NgOptimizedImage } from '@angular/common';
 import { NavigationStart, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
-import {
-    faArrowDownUpAcrossLine,
-    faAt,
-    faChartLine,
-    faChevronRight,
-    faComments,
-    faFileLines,
-    faList,
-    faQuestionCircle,
-    faSignOutAlt,
-    faTachometerAlt,
-    faUsers,
-    faUsersRectangle,
-    faWrench,
-} from '@fortawesome/free-solid-svg-icons';
+import { faArrowDownUpAcrossLine, faAt, faChartLine, faChevronRight, faComments, faFileLines, faList, faQuestionCircle, faSignOutAlt, faTachometerAlt, faUsers, faUsersRectangle, faWrench } from '@fortawesome/free-solid-svg-icons';
 import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
 import { Paths } from '../../../_utils/consts';
 import { AuthService } from '../../../_services/auth.service';
@@ -47,6 +33,10 @@ import { ConfirmDirective } from '../../tools/_directives/confirm.directive';
 })
 export class ControlCenterComponent implements OnInit {
 
+    private readonly router            = inject(Router);
+    private readonly authSvc           = inject(AuthService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+
     /** Whether the sidebar is open by the user (only applies to small screens). */
     expanded = false;
 
@@ -55,8 +45,8 @@ export class ControlCenterComponent implements OnInit {
 
     readonly Paths = Paths;
 
-    readonly pendingCommentCount$ = this.commentService.countPending;
-    readonly configUpdates$       = this.configSvc.isUpgradable;
+    readonly pendingCommentCount$ = inject(CommentService).countPending;
+    readonly configUpdates$       = inject(ConfigService).isUpgradable;
 
     // Icons
     readonly faArrowDownUpAcrossLine = faArrowDownUpAcrossLine;
@@ -72,14 +62,6 @@ export class ControlCenterComponent implements OnInit {
     readonly faUsers                 = faUsers;
     readonly faUsersRectangle        = faUsersRectangle;
     readonly faWrench                = faWrench;
-
-    constructor(
-        private readonly router: Router,
-        private readonly configSvc: ConfigService,
-        private readonly authSvc: AuthService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly commentService: CommentService,
-    ) {}
 
     get isSuper(): boolean | undefined {
         return this.domainMeta?.principal?.isSuperuser;

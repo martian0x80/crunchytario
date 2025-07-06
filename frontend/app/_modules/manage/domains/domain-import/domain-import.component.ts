@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { DecimalPipe, NgOptimizedImage } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -34,6 +34,9 @@ import { ValidatableDirective } from '../../../tools/_directives/validatable.dir
 })
 export class DomainImportComponent implements OnInit {
 
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+
     /** Target domain. */
     domain?: Domain;
 
@@ -42,7 +45,7 @@ export class DomainImportComponent implements OnInit {
 
     readonly Paths = Paths;
     readonly importing = new ProcessingStatus();
-    readonly form = this.fb.nonNullable.group({
+    readonly form = inject(FormBuilder).nonNullable.group({
         source: ['comentario' as 'comentario' | 'disqus' | 'wordpress', [Validators.required]],
         file:   [undefined as any, [Validators.required, XtraValidators.maxSize(10 * 1024 * 1024)]],
     });
@@ -50,12 +53,6 @@ export class DomainImportComponent implements OnInit {
     // Icons
     readonly faCheck               = faCheck;
     readonly faExclamationTriangle = faExclamationTriangle;
-
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-    ) {}
 
     get source() {
         return this.form.controls.source.value;

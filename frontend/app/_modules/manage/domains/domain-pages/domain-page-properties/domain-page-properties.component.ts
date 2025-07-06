@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, combineLatestWith, EMPTY, switchMap, tap } from 'rxjs';
@@ -33,6 +33,11 @@ import { DomainPageDetailsComponent } from '../domain-page-details/domain-page-d
 })
 export class DomainPagePropertiesComponent {
 
+    private readonly router            = inject(Router);
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+    private readonly toastSvc          = inject(ToastService);
+
     /** ID of the domain page to display properties for. */
     readonly id = input<string>();
 
@@ -58,13 +63,6 @@ export class DomainPagePropertiesComponent {
     readonly faEdit         = faEdit;
     readonly faRotate       = faRotate;
     readonly faTrashAlt     = faTrashAlt;
-
-    constructor(
-        private readonly router: Router,
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly toastSvc: ToastService,
-    ) {}
 
     updateTitle() {
         const id = this.id();

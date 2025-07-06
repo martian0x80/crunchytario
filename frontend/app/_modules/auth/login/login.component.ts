@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../_services/auth.service';
@@ -24,21 +24,18 @@ import { ValidatableDirective } from '../../tools/_directives/validatable.direct
 })
 export class LoginComponent implements OnInit {
 
+    private readonly route    = inject(ActivatedRoute);
+    private readonly router   = inject(Router);
+    private readonly authSvc  = inject(AuthService);
+    private readonly toastSvc = inject(ToastService);
+
     submitting = new ProcessingStatus();
 
     readonly Paths = Paths;
-    readonly form = this.fb.nonNullable.group({
+    readonly form = inject(FormBuilder).nonNullable.group({
         email:    ['', [Validators.required, Validators.email, Validators.minLength(6), Validators.maxLength(254)]],
         password: '',
     });
-
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly route: ActivatedRoute,
-        private readonly router: Router,
-        private readonly authSvc: AuthService,
-        private readonly toastSvc: ToastService,
-    ) {}
 
     ngOnInit(): void {
         // If there's the 'confirmed' parameter in the URL, display a toast

@@ -1,4 +1,4 @@
-import { ComponentRef, Directive, effect, EmbeddedViewRef, input, TemplateRef, ViewContainerRef } from '@angular/core';
+import { ComponentRef, Directive, effect, EmbeddedViewRef, input, TemplateRef, ViewContainerRef, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { of, switchMap, timer } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -12,6 +12,9 @@ export type LoaderKind = 'list' | 'cards' | 'pie';
     selector: '[appLoader]',
 })
 export class LoaderDirective {
+
+    private readonly templ = inject<TemplateRef<any>>(TemplateRef);
+    private readonly vc    = inject(ViewContainerRef);
 
     /** Whether the spinning animation is shown on the component. */
     readonly appLoader = input(false);
@@ -27,10 +30,7 @@ export class LoaderDirective {
     private loaderComp?: ComponentRef<LoaderListComponent>;
     private templView?: EmbeddedViewRef<any>;
 
-    constructor(
-        private readonly templ: TemplateRef<any>,
-        private readonly vc: ViewContainerRef,
-    ) {
+    constructor() {
         effect(() => {
             // Loader is shown
             if (this.show()) {

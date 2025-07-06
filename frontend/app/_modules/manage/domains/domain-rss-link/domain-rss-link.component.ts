@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { UntilDestroy } from '@ngneat/until-destroy';
@@ -29,13 +29,17 @@ type UserFilterKind = 'all' | 'author' | 'replies';
 })
 export class DomainRssLinkComponent {
 
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+
+    private readonly baseUrl = inject(ConfigService).staticConfig.baseUrl;
+
     /** Optional domain page ID to include in the filter. */
     readonly pageId = input<string>();
 
     /** Domain/user metadata. */
     readonly domainMeta = toSignal(this.domainSelectorSvc.domainMeta(false));
 
-    readonly form = this.fb.nonNullable.group({
+    readonly form = inject(FormBuilder).nonNullable.group({
         userFilter: 'all' as UserFilterKind,
     });
 
@@ -46,12 +50,6 @@ export class DomainRssLinkComponent {
 
     // Icons
     readonly faCopy = faCopy;
-
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly cfgSvc: ConfigService,
-    ) {}
 
     /** RSS feed URL. */
     readonly rssUrl = computed<string>(() => {
@@ -87,7 +85,7 @@ export class DomainRssLinkComponent {
         }
 
         // Construct the complete feed URL
-        return Utils.joinUrl(this.cfgSvc.staticConfig.baseUrl, environment.apiBasePath, 'rss/comments') +
+        return Utils.joinUrl(this.baseUrl, environment.apiBasePath, 'rss/comments') +
             '?' +
             up.toString();
     });

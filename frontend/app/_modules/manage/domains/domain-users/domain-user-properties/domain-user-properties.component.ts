@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { combineLatestWith, EMPTY, switchMap } from 'rxjs';
@@ -43,11 +43,13 @@ interface UserDomainUser {
 })
 export class DomainUserPropertiesComponent {
 
+    private readonly api = inject(ApiGeneralService);
+
     /** ID of the domain user to display properties for. */
     readonly id = input<string>();
 
     /** The current domain/user metadata. */
-    readonly domainMeta = toSignal(this.domainSelectorSvc.domainMeta(true));
+    readonly domainMeta = toSignal(inject(DomainSelectorService).domainMeta(true));
 
     /** The domain user in question, and the corresponding user. */
     readonly userDomainUser = toSignal<UserDomainUser>(
@@ -66,9 +68,4 @@ export class DomainUserPropertiesComponent {
 
     // Icons
     readonly faEdit = faEdit;
-
-    constructor(
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-    ) {}
 }

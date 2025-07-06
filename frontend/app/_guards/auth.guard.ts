@@ -16,17 +16,15 @@ import { PrincipalService } from '../_services/principal.service';
 })
 export class AuthGuard {
 
+    private readonly router    = inject(Router);
+    private readonly authSvc   = inject(AuthService);
+    private readonly toastSvc  = inject(ToastService);
+    private readonly principal = inject(PrincipalService).principal$;
+
     static readonly hasTokenInNavigation:    CanActivateFn = () => inject(AuthGuard).hasTokenInNavigation();
     static readonly isAuthenticatedMatch:    CanMatchFn    = (route, segments) => inject(AuthGuard).isAuthenticated(segments.map(u => u.path).join('/'));
     static readonly isAuthenticatedActivate: CanActivateFn = (route, state) => inject(AuthGuard).isAuthenticated(state.url);
     static readonly isUnauthenticated:       CanActivateFn = () => inject(AuthGuard).isUnauthenticated();
-
-    constructor(
-        private readonly router: Router,
-        private readonly authSvc: AuthService,
-        private readonly principalSvc: PrincipalService,
-        private readonly toastSvc: ToastService,
-    ) {}
 
     /**
      * Redirect to home unless there's a token available in the current navigation state.
@@ -46,7 +44,7 @@ export class AuthGuard {
      */
     isAuthenticated(url: string): Observable<boolean | UrlTree> {
         // Only allow if the user is authenticated
-        return this.principalSvc.principal$
+        return this.principal
             .pipe(
                 take(1),
                 map(p => {
@@ -65,7 +63,7 @@ export class AuthGuard {
      * Check whether the user is not authenticated and return either true or the dashboard route.
      */
     isUnauthenticated(): Observable<boolean | UrlTree> {
-        return this.principalSvc.principal$
+        return this.principal
             .pipe(
                 take(1),
                 map(p => p ? this.router.parseUrl(Paths.manage.dashboard) : true));

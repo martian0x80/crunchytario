@@ -41,6 +41,11 @@ import { Utils } from '../../../../../_utils/utils';
 })
 export class DomainPageMoveDataComponent {
 
+    private readonly router    = inject(Router);
+    private readonly api       = inject(ApiGeneralService);
+    private readonly dialogSvc = inject(DialogService);
+    private readonly toastSvc  = inject(ToastService);
+
     /** ID of the source domain page. */
     readonly id = input<string>();
 
@@ -53,7 +58,7 @@ export class DomainPageMoveDataComponent {
     readonly loading    = new ProcessingStatus();
     readonly submitting = new ProcessingStatus();
 
-    readonly form = this.fb.group({
+    readonly form = inject(FormBuilder).group({
         targetPage: [null as DomainPage | null, [XtraValidators.hasProperty('id')]],
     });
 
@@ -111,14 +116,6 @@ export class DomainPageMoveDataComponent {
 
     // Icons
     readonly faUpRightFromSquare = faUpRightFromSquare;
-
-    constructor(
-        private readonly router: Router,
-        private readonly fb: FormBuilder,
-        private readonly api: ApiGeneralService,
-        private readonly dialogSvc: DialogService,
-        private readonly toastSvc: ToastService,
-    ) {}
 
     async submit() {
         // Mark all controls touched to display validation results

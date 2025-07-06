@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
@@ -31,10 +31,12 @@ import { ValidatableDirective } from '../../../../tools/_directives/validatable.
 })
 export class DomainInstallComponent implements OnInit {
 
+    private readonly cfg = inject(ConfigService).staticConfig;
+
     /** Whether the snippet options section is collapsed. */
     collapseSnippetOptions = true;
 
-    readonly form = this.fb.nonNullable.group({
+    readonly form = inject(FormBuilder).nonNullable.group({
         autoInit:              true,
         autoNonInteractiveSso: false,
         liveUpdate:            true,
@@ -47,19 +49,14 @@ export class DomainInstallComponent implements OnInit {
         theme:                 '',
     });
 
-    readonly languages = this.cfgSvc.staticConfig.uiLanguages;
+    readonly languages = this.cfg.uiLanguages;
 
     // Icons
     readonly faChevronDown         = faChevronDown;
     readonly faCopy                = faCopy;
     readonly faExclamationTriangle = faExclamationTriangle;
 
-    private readonly scriptUrl = Utils.joinUrl(this.cfgSvc.staticConfig.baseUrl, 'comentario.js');
-
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly cfgSvc: ConfigService,
-    ) {}
+    private readonly scriptUrl = Utils.joinUrl(this.cfg.baseUrl, 'comentario.js');
 
     get snippet(): string {
         let opts = '';

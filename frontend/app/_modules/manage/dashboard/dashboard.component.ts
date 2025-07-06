@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { concatMap, first, tap } from 'rxjs';
 import { UntilDestroy } from '@ngneat/until-destroy';
@@ -25,8 +25,11 @@ import { PrincipalService } from '../../../_services/principal.service';
 })
 export class DashboardComponent implements OnInit {
 
+    private readonly api       = inject(ApiGeneralService);
+    private readonly configSvc = inject(ConfigService);
+
     /** Currently authenticated principal. */
-    readonly principal = this.principalSvc.principal;
+    readonly principal = inject(PrincipalService).principal;
 
     /** Number of days to request. */
     readonly numDays = this.configSvc.staticConfig.pageViewStatsMaxDays;
@@ -48,12 +51,6 @@ export class DashboardComponent implements OnInit {
 
     readonly Paths = Paths;
     readonly loading = new ProcessingStatus();
-
-    constructor(
-        private readonly api: ApiGeneralService,
-        private readonly configSvc: ConfigService,
-        private readonly principalSvc: PrincipalService,
-    ) {}
 
     ngOnInit(): void {
         // Fetch dynamic config

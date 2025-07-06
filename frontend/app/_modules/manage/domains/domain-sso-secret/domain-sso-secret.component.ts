@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
 import { faCopy, faExclamationTriangle, faRotate } from '@fortawesome/free-solid-svg-icons';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
@@ -25,6 +25,9 @@ import { SpinnerDirective } from '../../../tools/_directives/spinner.directive';
 })
 export class DomainSsoSecretComponent implements OnInit {
 
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+
     /** Domain/user metadata. */
     domainMeta?: DomainMeta;
 
@@ -38,11 +41,6 @@ export class DomainSsoSecretComponent implements OnInit {
     readonly faCopy                = faCopy;
     readonly faExclamationTriangle = faExclamationTriangle;
     readonly faRotate              = faRotate;
-
-    constructor(
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-    ) {}
 
     ngOnInit(): void {
         // Subscribe to domain changes

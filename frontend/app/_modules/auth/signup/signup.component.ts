@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { first } from 'rxjs';
@@ -32,12 +32,17 @@ import { ValidatableDirective } from '../../tools/_directives/validatable.direct
 })
 export class SignupComponent {
 
+    private readonly router   = inject(Router);
+    private readonly api      = inject(ApiGeneralService);
+    private readonly toastSvc = inject(ToastService);
+    private readonly cfgSvc   = inject(ConfigService);
+
     isComplete = false;
     signupAllowed = false;
 
     readonly Paths = Paths;
     readonly submitting = new ProcessingStatus();
-    readonly form = this.fb.nonNullable.group({
+    readonly form = inject(FormBuilder).nonNullable.group({
         email:    ['', [Validators.required, Validators.email, Validators.minLength(6), Validators.maxLength(254)]],
         password: '',
         name:     ['', [Validators.required, Validators.minLength(2), Validators.maxLength(63)]],
@@ -50,13 +55,7 @@ export class SignupComponent {
     readonly faBan   = faBan;
     readonly faCheck = faCheck;
 
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly router: Router,
-        private readonly api: ApiGeneralService,
-        private readonly toastSvc: ToastService,
-        private readonly cfgSvc: ConfigService,
-    ) {
+    constructor() {
         this.cfgSvc.dynamicConfig
             .pipe(first())
             .subscribe(dc => this.signupAllowed = dc.get(InstanceConfigItemKey.authSignupEnabled).val as boolean);

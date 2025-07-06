@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { DecimalPipe, KeyValuePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { combineLatestWith, first } from 'rxjs';
@@ -55,6 +55,9 @@ import { DomainRssLinkComponent } from '../domain-rss-link/domain-rss-link.compo
 })
 export class DomainPropertiesComponent implements OnInit {
 
+    private readonly cfgSvc            = inject(ConfigService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+
     /** Domain/user metadata. */
     domainMeta?: DomainMeta;
 
@@ -70,11 +73,6 @@ export class DomainPropertiesComponent implements OnInit {
     // Icons
     readonly faEdit   = faEdit;
     readonly faTicket = faTicket;
-
-    constructor(
-        private readonly cfgSvc: ConfigService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-    ) {}
 
     /**
      * Whether any specific moderator approval policy is in place.

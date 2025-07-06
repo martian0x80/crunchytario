@@ -1,4 +1,4 @@
-import { Component, effect, ElementRef, ViewChild } from '@angular/core';
+import { Component, effect, ElementRef, inject, ViewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { concat, EMPTY, first, Observable } from 'rxjs';
@@ -46,6 +46,14 @@ import { PrincipalService } from '../../../../_services/principal.service';
 })
 export class ProfileComponent {
 
+    private readonly fb = inject(FormBuilder);
+    private readonly router = inject(Router);
+    private readonly authSvc = inject(AuthService);
+    private readonly principalSvc = inject(PrincipalService);
+    private readonly toastSvc = inject(ToastService);
+    private readonly api = inject(ApiGeneralService);
+    private readonly cfgSvc = inject(ConfigService);
+
     @ViewChild('avatarFileInput')
     avatarFileInput?: ElementRef<HTMLInputElement>;
 
@@ -68,7 +76,7 @@ export class ProfileComponent {
     canEditEmail = false;
 
     /** UI plugs destined for the profile page. */
-    readonly plugs = this.pluginSvc.uiPlugsForLocation('profile');
+    readonly plugs = inject(PluginService).uiPlugsForLocation('profile');
 
     /** Available interface languages. */
     readonly languages = this.cfgSvc.staticConfig.uiLanguages || [];
@@ -102,17 +110,8 @@ export class ProfileComponent {
     readonly faSkullCrossbones = faSkullCrossbones;
     readonly faTrashAlt        = faTrashAlt;
 
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly router: Router,
-        private readonly authSvc: AuthService,
-        private readonly principalSvc: PrincipalService,
-        private readonly toastSvc: ToastService,
-        private readonly api: ApiGeneralService,
-        private readonly pluginSvc: PluginService,
-        private readonly cfgSvc: ConfigService,
-    ) {
-        cfgSvc.dynamicConfig
+    constructor() {
+        this.cfgSvc.dynamicConfig
             .pipe(first())
             .subscribe(dc => this.canEditEmail = dc.get(InstanceConfigItemKey.authEmailUpdateEnabled).val as boolean);
 

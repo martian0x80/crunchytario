@@ -1,4 +1,4 @@
-import { Inject, Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform, inject } from '@angular/core';
 import { formatDate } from '@angular/common';
 import { Language } from '../../../_models/models';
 import { LANGUAGE } from '../../../../environments/languages';
@@ -8,12 +8,10 @@ import { LANGUAGE } from '../../../../environments/languages';
 })
 export class DatetimePipe implements PipeTransform {
 
+    private readonly lang = inject<Language>(LANGUAGE);
+
     /** Date string as returned from the Go backend when no date is provided. */
     static readonly ZERO_DATE = '0001-01-01T00:00:00.000Z';
-
-    constructor(
-        @Inject(LANGUAGE) private readonly lang: Language,
-    ) {}
 
     /**
      * Transforms a date (Date or string) into a formatted date string, taking a possible "zero date" into account.

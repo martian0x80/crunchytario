@@ -1,16 +1,31 @@
 import { DatetimePipe } from './datetime.pipe';
+import { TestBed } from '@angular/core/testing';
+import { RouterModule } from '@angular/router';
+import { FederatedLoginComponent } from '../../auth/federated-login/federated-login.component';
+import { LANGUAGE } from '../../../../environments/languages';
+import { Language } from '../../../_models/models';
 
 describe('DatetimePipe', () => {
 
     let pipe: DatetimePipe;
 
-    beforeEach(() => pipe = new DatetimePipe({
-        nativeName: 'English',
-        code: 'en',
-        dateFormat: 'M/d/yyyy',
-        datetimeFormat: 'M/d/yyyy, h:mm a',
-        weight: 1,
-    }));
+    beforeEach(() => {
+        const lang: Language = {
+            nativeName: 'English',
+            code: 'en',
+            dateFormat: 'M/d/yyyy',
+            datetimeFormat: 'M/d/yyyy, h:mm a',
+            weight: 1,
+        };
+
+        TestBed.configureTestingModule({
+            imports: [RouterModule.forRoot([]), FederatedLoginComponent],
+            providers: [
+                {provide: LANGUAGE, useValue: lang},
+            ],
+        });
+        pipe = TestBed.runInInjectionContext(() => new DatetimePipe());
+    });
 
     it('is created', () => {
         expect(pipe).toBeTruthy();

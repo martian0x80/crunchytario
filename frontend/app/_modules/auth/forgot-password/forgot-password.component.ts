@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ProcessingStatus } from '../../../_utils/processing-status';
@@ -18,17 +18,15 @@ import { ValidatableDirective } from '../../tools/_directives/validatable.direct
 })
 export class ForgotPasswordComponent {
 
+    private readonly router   = inject(Router);
+    private readonly toastSvc = inject(ToastService);
+    private readonly api      = inject(ApiGeneralService);
+
     readonly submitting = new ProcessingStatus();
-    readonly form = this.fb.nonNullable.group({
+
+    readonly form = inject(FormBuilder).nonNullable.group({
         email: ['', [Validators.required, Validators.email, Validators.minLength(6), Validators.maxLength(254)]],
     });
-
-    constructor(
-        private readonly router: Router,
-        private readonly fb: FormBuilder,
-        private readonly toastSvc: ToastService,
-        private readonly api: ApiGeneralService,
-    ) {}
 
     submit(): void {
         // Mark all controls touched to display validation results

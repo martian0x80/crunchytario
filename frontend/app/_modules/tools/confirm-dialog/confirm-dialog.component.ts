@@ -1,4 +1,4 @@
-import { Component, computed, model, TemplateRef, ViewChild } from '@angular/core';
+import { Component, computed, model, TemplateRef, ViewChild, inject } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
@@ -14,6 +14,9 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
     ],
 })
 export class ConfirmDialogComponent {
+
+    private readonly sanitizer = inject(DomSanitizer);
+    readonly activeModal = inject(NgbActiveModal);
 
     /** Optional title to display in the modal header. */
     readonly title = model<string>();
@@ -43,9 +46,4 @@ export class ConfirmDialogComponent {
 
     @ViewChild('textTempl', {static: true})
     textTempl?: TemplateRef<any>;
-
-    constructor(
-        private readonly sanitizer: DomSanitizer,
-        readonly activeModal: NgbActiveModal,
-    ) {}
 }

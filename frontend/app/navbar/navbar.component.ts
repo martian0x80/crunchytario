@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Paths } from '../_utils/consts';
@@ -20,14 +20,11 @@ import { PrincipalService } from '../_services/principal.service';
 })
 export class NavbarComponent {
 
+    readonly principalSvc = inject(PrincipalService);
+    readonly docsSvc      = inject(DocsService);
+
     readonly Paths = Paths;
 
     /** UI plugs destined for the navbar. */
-    readonly plugs = this.pluginSvc.uiPlugsForLocation('navbar.menu');
-
-    constructor(
-        readonly principalSvc: PrincipalService,
-        readonly docsSvc: DocsService,
-        private readonly pluginSvc: PluginService,
-    ) {}
+    readonly plugs = inject(PluginService).uiPlugsForLocation('navbar.menu');
 }

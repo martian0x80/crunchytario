@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { JsonPipe, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
@@ -24,6 +24,10 @@ import { ServerMessageComponent } from '../_modules/tools/server-message/server-
     ],
 })
 export class ToastComponent {
+
+    private readonly router   = inject(Router);
+    private readonly toastSvc = inject(ToastService);
+    private readonly authSvc  = inject(AuthService);
 
     /** Whether toasts are to be automatically hidden after a timeout. */
     autohide = true;
@@ -63,11 +67,7 @@ export class ToastComponent {
     // Icons
     readonly faChevronDown = faChevronDown;
 
-    constructor(
-        private readonly router: Router,
-        private readonly toastSvc: ToastService,
-        private readonly authSvc: AuthService,
-    ) {
+    constructor() {
         this.toastSvc.toastsChanges.subscribe(ts => this.toasts = ts);
     }
 

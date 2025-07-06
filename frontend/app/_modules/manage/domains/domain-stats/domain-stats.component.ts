@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { DomainSelectorService } from '../../_services/domain-selector.service';
 import { DomainBadgeComponent } from '../../badges/domain-badge/domain-badge.component';
@@ -14,10 +14,5 @@ import { StatsComponent } from '../../stats/stats/stats.component';
     ],
 })
 export class DomainStatsComponent {
-
-    readonly domainMeta$ = this.domainSelectorSvc.domainMeta(true);
-
-    constructor(
-        private readonly domainSelectorSvc: DomainSelectorService,
-    ) {}
+    readonly domainMeta$ = inject(DomainSelectorService).domainMeta(true);
 }

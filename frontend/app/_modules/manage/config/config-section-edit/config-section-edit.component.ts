@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, computed, effect, input, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DecimalPipe, LowerCasePipe, NgTemplateOutlet } from '@angular/common';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
@@ -27,6 +27,8 @@ import { ValidatableDirective } from '../../../tools/_directives/validatable.dir
 })
 export class ConfigSectionEditComponent implements OnChanges {
 
+    private readonly fb = inject(FormBuilder);
+
     /** Form group to add controls to. */
     readonly formGroup = input<FormGroup>();
 
@@ -49,9 +51,7 @@ export class ConfigSectionEditComponent implements OnChanges {
     // Icons
     readonly faRotateLeft = faRotateLeft;
 
-    constructor(
-        private readonly fb: FormBuilder,
-    ) {
+    constructor() {
         effect(() => this.recreateControls());
     }
 

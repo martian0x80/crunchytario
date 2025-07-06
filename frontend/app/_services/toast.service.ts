@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { NavigationStart, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
@@ -60,9 +60,9 @@ export class ToastService {
     /** Internal list of toasts. */
     private _toasts: Toast[] = [];
 
-    constructor(router: Router) {
+    constructor() {
         // Remove toasts on route change
-        router.events.subscribe(e => e instanceof NavigationStart && this.clearOnRouteChange());
+        inject(Router).events.subscribe(e => e instanceof NavigationStart && this.clearOnRouteChange());
     }
 
     /**

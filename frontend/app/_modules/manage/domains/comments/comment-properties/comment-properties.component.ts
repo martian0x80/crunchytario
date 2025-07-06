@@ -1,4 +1,4 @@
-import { Component, effect, input, OnInit } from '@angular/core';
+import { Component, effect, input, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BehaviorSubject, EMPTY, from, switchMap } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -44,6 +44,12 @@ import { DialogService } from '../../../_services/dialog.service';
     ],
 })
 export class CommentPropertiesComponent implements OnInit {
+
+    private readonly route             = inject(ActivatedRoute);
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+    private readonly dialogService     = inject(DialogService);
+    private readonly commentService    = inject(CommentService);
 
     /** ID of the comment to load properties for. */
     readonly id = input<string>();
@@ -98,13 +104,7 @@ export class CommentPropertiesComponent implements OnInit {
 
     private readonly reload$ = new BehaviorSubject<void>(undefined);
 
-    constructor(
-        private readonly route: ActivatedRoute,
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly dialogService: DialogService,
-        private readonly commentService: CommentService,
-    ) {
+    constructor() {
         // Load the comment properties initially, and reload on changes
         effect(() => this.reload());
     }

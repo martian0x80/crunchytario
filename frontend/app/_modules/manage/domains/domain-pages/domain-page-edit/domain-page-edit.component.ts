@@ -1,4 +1,4 @@
-import { Component, effect, input } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -25,6 +25,11 @@ import { ValidatableDirective } from '../../../../tools/_directives/validatable.
 })
 export class DomainPageEditComponent {
 
+    private readonly router            = inject(Router);
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+    private readonly toastSvc          = inject(ToastService);
+
     /** ID of the domain page to edit. */
     readonly id = input<string>();
 
@@ -36,19 +41,13 @@ export class DomainPageEditComponent {
 
     readonly loading = new ProcessingStatus();
     readonly saving  = new ProcessingStatus();
-    readonly form = this.fb.nonNullable.group({
+    readonly form = inject(FormBuilder).nonNullable.group({
         readOnly: false,
         path:     [{value: '', disabled: true}, [Validators.required, Validators.pattern(/^\//), Validators.maxLength(2075)]],
         title:    [{value: '', disabled: true}, [Validators.maxLength(100)]],
     });
 
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly router: Router,
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly toastSvc: ToastService,
-    ) {
+    constructor() {
         // Load the domain page initially, and reload on changes
         effect(() => this.reload());
     }

@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { first } from 'rxjs';
 import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
 import { ConfigService } from '../../../../_services/config.service';
@@ -10,7 +11,6 @@ import { DatetimePipe } from '../../_pipes/datetime.pipe';
 import { InfoIconComponent } from '../../../tools/info-icon/info-icon.component';
 import { IdentityProviderIconComponent } from '../../../tools/identity-provider-icon/identity-provider-icon.component';
 import { CheckmarkComponent } from '../../../tools/checkmark/checkmark.component';
-import { DecimalPipe } from '@angular/common';
 
 @UntilDestroy()
 @Component({
@@ -29,15 +29,13 @@ import { DecimalPipe } from '@angular/common';
 })
 export class StaticConfigComponent implements OnInit {
 
+    private readonly configSvc = inject(ConfigService);
+
     extensions?: DomainExtension[];
     isUpgradable?: boolean;
     latestRelease?: ReleaseMetadata;
 
     readonly cfg = this.configSvc.staticConfig;
-
-    constructor(
-        private readonly configSvc: ConfigService,
-    ) {}
 
     ngOnInit(): void {
         // Fetch enabled extensions

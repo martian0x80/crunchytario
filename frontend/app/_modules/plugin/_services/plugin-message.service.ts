@@ -1,4 +1,4 @@
-import { effect, Injectable, Injector } from '@angular/core';
+import { effect, Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { fromEvent } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -21,6 +21,13 @@ type PluginPortEventHandler<T extends PluginPortEventBase> = (data: T) => void;
     providedIn: 'root',
 })
 export class PluginMessageService {
+
+    private readonly injector       = inject(Injector);
+    private readonly router         = inject(Router);
+    private readonly authSvc        = inject(AuthService);
+    private readonly principalSvc   = inject(PrincipalService);
+    private readonly toastSvc       = inject(ToastService);
+    private readonly domainEventSvc = inject(DomainEventService);
 
     /** Handle NavigationRequest port message. */
     private readonly handlePE_NavigationRequest: PluginPortEventHandler<PluginPortEventNavigationRequest> = data => {
@@ -53,14 +60,7 @@ export class PluginMessageService {
         [PluginPortEventKind.ShowToastRequest]:       this.handlePE_ShowToastRequest,
     };
 
-    constructor(
-        private readonly injector: Injector,
-        private readonly router: Router,
-        private readonly authSvc: AuthService,
-        private readonly principalSvc: PrincipalService,
-        private readonly toastSvc: ToastService,
-        private readonly domainEventSvc: DomainEventService,
-    ) {
+    constructor() {
         // Subscribe to window message events carrying a port
         fromEvent<MessageEvent>(window, 'message', {capture: false})
             // Only accept valid messages

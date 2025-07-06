@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { first, Observable, of, switchMap } from 'rxjs';
@@ -54,6 +54,15 @@ interface ExtensionValue {
 })
 export class DomainEditComponent implements OnInit {
 
+    private readonly fb                = inject(FormBuilder);
+    private readonly route             = inject(ActivatedRoute);
+    private readonly router            = inject(Router);
+    private readonly api               = inject(ApiGeneralService);
+    private readonly cfgSvc            = inject(ConfigService);
+    private readonly toastSvc          = inject(ToastService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+    private readonly domainEventSvc    = inject(DomainEventService);
+
     /** Whether the page is about creating a new instance (rather than editing an existing one). */
     isNew = true;
 
@@ -78,17 +87,6 @@ export class DomainEditComponent implements OnInit {
 
     // Icons
     readonly faExclamationTriangle = faExclamationTriangle;
-
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly route: ActivatedRoute,
-        private readonly router: Router,
-        private readonly api: ApiGeneralService,
-        private readonly cfgSvc: ConfigService,
-        private readonly toastSvc: ToastService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly domainEventSvc: DomainEventService,
-    ) {}
 
     /**
      * Number of authentication methods enabled.

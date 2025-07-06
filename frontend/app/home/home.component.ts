@@ -1,4 +1,4 @@
-import { Component, computed, effect } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { UntilDestroy } from '@ngneat/until-destroy';
 import { AuthService } from '../_services/auth.service';
@@ -18,10 +18,16 @@ import { PrincipalService } from '../_services/principal.service';
 })
 export class HomeComponent {
 
+    private readonly route        = inject(ActivatedRoute);
+    private readonly router       = inject(Router);
+    private readonly authSvc      = inject(AuthService);
+    private readonly principalSvc = inject(PrincipalService);
+    private readonly toastSvc     = inject(ToastService);
+
     readonly isAuthenticated = computed(() => !!this.principalSvc.principal());
 
     readonly Paths = Paths;
-    readonly embedUrl = this.configSvc.staticConfig.homeContentUrl;
+    readonly embedUrl = inject(ConfigService).staticConfig.homeContentUrl;
 
     /** Handlers to execute when a specific parameter is present */
     private readonly paramHandlers: Record<string, (value: string, allParams: ParamMap) => any> = {
@@ -33,14 +39,7 @@ export class HomeComponent {
     private paramsProcessed = false;
     private canRedirect = true;
 
-    constructor(
-        private readonly route: ActivatedRoute,
-        private readonly router: Router,
-        private readonly configSvc: ConfigService,
-        private readonly authSvc: AuthService,
-        private readonly principalSvc: PrincipalService,
-        private readonly toastSvc: ToastService,
-    ) {
+    constructor() {
         effect(() => {
             const auth = this.isAuthenticated();
 

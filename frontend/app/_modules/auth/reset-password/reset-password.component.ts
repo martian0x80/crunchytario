@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ProcessingStatus } from '../../../_utils/processing-status';
@@ -19,20 +19,20 @@ import { SpinnerDirective } from '../../tools/_directives/spinner.directive';
 })
 export class ResetPasswordComponent implements OnDestroy {
 
+    private readonly router    = inject(Router);
+    private readonly toastSvc  = inject(ToastService);
+    private readonly api       = inject(ApiGeneralService);
+    private readonly apiConfig = inject(Configuration);
+
     readonly submitting = new ProcessingStatus();
-    readonly form = this.fb.nonNullable.group({
+
+    readonly form = inject(FormBuilder).nonNullable.group({
         newPassword: '',
     });
 
-    constructor(
-        private readonly router: Router,
-        private readonly fb: FormBuilder,
-        private readonly toastSvc: ToastService,
-        private readonly api: ApiGeneralService,
-        private readonly apiConfig: Configuration,
-    ) {
+    constructor() {
         // Set the auth token in the API config to be used for the password change
-        this.apiConfig.credentials.token = router.getCurrentNavigation()?.extras?.state?.token;
+        this.apiConfig.credentials.token = this.router.getCurrentNavigation()?.extras?.state?.token;
     }
 
     ngOnDestroy(): void {

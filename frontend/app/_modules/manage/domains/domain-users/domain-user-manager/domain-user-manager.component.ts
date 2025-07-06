@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, merge, mergeWith, Subject, switchMap, tap } from 'rxjs';
@@ -52,6 +52,11 @@ import { SortableViewSettings } from '../../../_models/view';
 })
 export class DomainUserManagerComponent implements OnInit {
 
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+    private readonly configSvc         = inject(ConfigService);
+    private readonly localSettingSvc   = inject(LocalSettingService);
+
     /** Domain/user metadata. */
     domainMeta?: DomainMeta;
 
@@ -70,7 +75,7 @@ export class DomainUserManagerComponent implements OnInit {
     readonly sort = new Sort(['email', 'name', 'created'], 'email', false);
     readonly loading = new ProcessingStatus();
 
-    readonly filterForm = this.fb.nonNullable.group({
+    readonly filterForm = inject(FormBuilder).nonNullable.group({
         filter: '',
     });
 
@@ -80,15 +85,9 @@ export class DomainUserManagerComponent implements OnInit {
     readonly faBan      = faBan;
     readonly faUserLock = faUserLock;
 
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly configSvc: ConfigService,
-        private readonly localSettingSvc: LocalSettingService,
-    ) {
+    constructor() {
         // Restore the view settings
-        localSettingSvc.load<SortableViewSettings>('domainUserManager').subscribe(s => s?.sort && (this.sort.asString = s.sort));
+        this.localSettingSvc.load<SortableViewSettings>('domainUserManager').subscribe(s => s?.sort && (this.sort.asString = s.sort));
     }
 
     ngOnInit(): void {

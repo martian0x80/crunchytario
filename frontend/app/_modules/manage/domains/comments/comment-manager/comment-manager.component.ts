@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommentService } from '../../../_services/comment.service';
 import { DomainBadgeComponent } from '../../../badges/domain-badge/domain-badge.component';
 import { CommentListComponent } from '../comment-list/comment-list.component';
@@ -13,9 +13,7 @@ import { CommentListComponent } from '../comment-list/comment-list.component';
 })
 export class CommentManagerComponent implements OnInit {
 
-    constructor(
-        private readonly commentSvc: CommentService,
-    ) {}
+    private readonly commentSvc = inject(CommentService);
 
     ngOnInit(): void {
         // Poke the comment service to refresh the comment count

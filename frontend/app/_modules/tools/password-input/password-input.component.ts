@@ -1,4 +1,4 @@
-import { Component, computed, forwardRef, Injector, input, OnInit, signal } from '@angular/core';
+import { Component, computed, forwardRef, Injector, input, OnInit, signal, inject } from '@angular/core';
 import { AbstractControl, ControlValueAccessor, FormsModule, NG_VALIDATORS, NG_VALUE_ACCESSOR, NgControl, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faEye, faEyeSlash, IconDefinition } from '@fortawesome/free-solid-svg-icons';
@@ -30,6 +30,8 @@ import { ValidatableDirective } from '../_directives/validatable.directive';
     ],
 })
 export class PasswordInputComponent implements OnInit, ControlValueAccessor {
+
+    private readonly injector = inject(Injector);
 
     /** Patterns that turn into errors when they don't match the entered value (only when strong == true). */
     static readonly Regexes = {
@@ -75,10 +77,6 @@ export class PasswordInputComponent implements OnInit, ControlValueAccessor {
 
     private _onChange?: (_: any) => void;
     private _onBlur?: () => void;
-
-    constructor(
-        private readonly injector: Injector,
-    ) {}
 
     get value(): string {
         return this._value;

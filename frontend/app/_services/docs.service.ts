@@ -1,4 +1,4 @@
-import { Inject, Injectable, LOCALE_ID } from '@angular/core';
+import { Injectable, LOCALE_ID, inject } from '@angular/core';
 import { ConfigService } from './config.service';
 import { Utils } from '../_utils/utils';
 
@@ -7,10 +7,8 @@ import { Utils } from '../_utils/utils';
 })
 export class DocsService {
 
-    constructor(
-        @Inject(LOCALE_ID) private readonly locale: string,
-        private readonly cfgSvc: ConfigService,
-    ) {}
+    private readonly locale      = inject(LOCALE_ID);
+    private readonly baseDocsUrl = inject(ConfigService).staticConfig.baseDocsUrl;
 
     get urlHome(): string {
         return this.getPageUrl('');
@@ -34,6 +32,6 @@ export class DocsService {
      * @param lang Language to return a URL for. Optional, defaults to the current UI language.
      */
     getPageUrl(path: string, lang?: string): string {
-        return Utils.joinUrl(this.cfgSvc.staticConfig.baseDocsUrl, lang || this.locale, path);
+        return Utils.joinUrl(this.baseDocsUrl, lang || this.locale, path);
     }
 }

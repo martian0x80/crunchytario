@@ -1,4 +1,4 @@
-import { Component, computed, Inject, input, OnDestroy } from '@angular/core';
+import { Component, computed, input, OnDestroy, inject } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faUser } from '@fortawesome/free-solid-svg-icons';
@@ -17,6 +17,9 @@ import { HashColourPipe } from '../_pipes/hash-colour.pipe';
     ],
 })
 export class UserAvatarComponent implements OnDestroy {
+
+    private readonly API_CONFIG = inject<Configuration>(Configuration);
+    private readonly sanitizer  = inject(DomSanitizer);
 
     /** Avatar size. Defaults to 'S'. */
     readonly size = input<'S' | 'M' | 'L'>('S');
@@ -112,11 +115,6 @@ export class UserAvatarComponent implements OnDestroy {
 
     // Icons
     readonly faUser = faUser;
-
-    constructor(
-        @Inject(Configuration) private readonly API_CONFIG: Configuration,
-        private readonly sanitizer: DomSanitizer,
-    ) {}
 
     ngOnDestroy(): void {
         this.cleanupUrlOverride();

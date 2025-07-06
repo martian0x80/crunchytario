@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpContext } from '@angular/common/http';
 import { finalize, Observable, of, tap } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -11,14 +11,14 @@ import { PrincipalService } from './principal.service';
 })
 export class AuthService {
 
+    private readonly apiConfig    = inject(Configuration);
+    private readonly api          = inject(ApiGeneralService);
+    private readonly principalSvc = inject(PrincipalService);
+
     /** Last set URL to redirect to after a successful login. */
     afterLoginRedirectUrl?: string;
 
-    constructor(
-        private readonly apiConfig: Configuration,
-        private readonly api: ApiGeneralService,
-        private readonly principalSvc: PrincipalService,
-    ) {
+    constructor() {
         // Initially fetch a user
         this.update();
     }

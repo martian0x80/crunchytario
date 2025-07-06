@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { KeyValuePipe, LowerCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
@@ -38,6 +38,10 @@ import { DynConfigItemValueComponent } from '../../dyn-config-item-value/dyn-con
 })
 export class DynamicConfigComponent implements OnInit {
 
+    private readonly configSvc = inject(ConfigService);
+    private readonly api       = inject(ApiGeneralService);
+    private readonly toastSvc  = inject(ToastService);
+
     /** Config items, grouped by section. */
     bySection?: Record<string, TypedConfigItem[]>;
 
@@ -48,12 +52,6 @@ export class DynamicConfigComponent implements OnInit {
     readonly faPencil     = faPencil;
     readonly faStarOfLife = faStarOfLife;
     readonly faUndo       = faUndo;
-
-    constructor(
-        private readonly configSvc: ConfigService,
-        private readonly api: ApiGeneralService,
-        private readonly toastSvc: ToastService,
-    ) {}
 
     ngOnInit(): void {
         // Subscribe to param changes

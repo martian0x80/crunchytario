@@ -11,6 +11,9 @@ import { Paths } from '../../../_utils/consts';
 @Injectable()
 export class ManageGuard {
 
+    private readonly router = inject(Router);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+
     static readonly selectDomain:       CanActivateFn = (route) => inject(ManageGuard).selectDomain(route);
     static readonly isDomainSelected:   CanActivateFn = () => inject(ManageGuard).isDomainSelected();
     static readonly canModerateDomain:  CanActivateFn = () => inject(ManageGuard).canModerateDomain();
@@ -18,11 +21,6 @@ export class ManageGuard {
     static readonly canManageDomainSso: CanActivateFn = () => inject(ManageGuard).canManageDomainSso();
     static readonly isSuper:            CanActivateFn = () => inject(ManageGuard).isSuper();
     static readonly isLocal:            CanActivateFn = () => inject(ManageGuard).isLocal();
-
-    constructor(
-        private readonly router: Router,
-        private readonly domainSelectorSvc: DomainSelectorService,
-    ) {}
 
     /**
      * Try to select the domain given in the ID route parameter and return either true, or the domain manager route.

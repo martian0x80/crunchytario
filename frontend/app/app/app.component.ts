@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, Inject } from '@angular/core';
+import { AfterViewInit, Component, inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { NavigationEnd, RouteConfigLoadEnd, RouteConfigLoadStart, Router, RouterOutlet } from '@angular/router';
 import { Subscription, timer } from 'rxjs';
@@ -24,6 +24,9 @@ import { FooterComponent } from '../footer/footer.component';
 })
 export class AppComponent implements AfterViewInit {
 
+    private readonly doc      = inject<Document>(DOCUMENT);
+    private readonly modalSvc = inject(NgbModal);
+
     title = 'Comentario';
     hasSidebar = false;
 
@@ -31,13 +34,9 @@ export class AppComponent implements AfterViewInit {
     moduleLoading = false;
     moduleLoadingSub?: Subscription;
 
-    constructor(
-        @Inject(DOCUMENT) private readonly doc: Document,
-        private readonly router: Router,
-        private readonly modalSvc: NgbModal,
-    ) {
+    constructor() {
         // Subscribe to route changes
-        this.router.events
+        inject(Router).events
             .pipe(untilDestroyed(this))
             .subscribe(event => {
                 switch (true) {

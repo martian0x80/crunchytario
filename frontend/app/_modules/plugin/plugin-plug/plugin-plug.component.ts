@@ -1,4 +1,4 @@
-import { AfterContentInit, Component, computed, effect, ElementRef, input, signal, ViewChild } from '@angular/core';
+import { AfterContentInit, Component, computed, effect, ElementRef, input, signal, ViewChild, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { JsonPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
@@ -26,6 +26,9 @@ import { SpinnerDirective } from '../../tools/_directives/spinner.directive';
     ],
 })
 export class PluginPlugComponent implements AfterContentInit {
+
+    private readonly route         = inject(ActivatedRoute);
+    private readonly pluginService = inject(PluginService);
 
     /** Plug to create a component for. If empty, assumes the current RouteData is to be used. */
     readonly plug = input<UIPlug>();
@@ -70,10 +73,7 @@ export class PluginPlugComponent implements AfterContentInit {
     // Icons
     readonly faAngleDown = faAngleDown;
 
-    constructor(
-        private readonly route: ActivatedRoute,
-        private readonly pluginService: PluginService,
-    ) {
+    constructor() {
         effect(() => this.load());
     }
 

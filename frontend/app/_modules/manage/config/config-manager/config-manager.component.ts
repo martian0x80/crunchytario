@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { NgbNavModule } from '@ng-bootstrap/ng-bootstrap';
 import { Paths } from '../../../../_utils/consts';
@@ -14,9 +14,6 @@ import { Paths } from '../../../../_utils/consts';
 })
 export class ConfigManagerComponent {
 
+    readonly router = inject(Router);
     readonly Paths = Paths;
-
-    constructor(
-        readonly router: Router,
-    ) {}
 }

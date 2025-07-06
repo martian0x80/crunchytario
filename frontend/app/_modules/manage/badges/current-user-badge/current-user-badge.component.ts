@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, inject } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faUserCheck } from '@fortawesome/free-solid-svg-icons';
@@ -18,6 +18,8 @@ import { PrincipalService } from '../../../../_services/principal.service';
 })
 export class CurrentUserBadgeComponent {
 
+    private readonly principal = inject(PrincipalService).principal;
+
     /** ID of the user to render a badge (or no badge) for. */
     readonly userId = input<string>();
 
@@ -27,13 +29,9 @@ export class CurrentUserBadgeComponent {
     /** Whether the user denoted by userId is the currently authenticated one. */
     readonly isCurrent = computed(() => {
         const uid = this.userId();
-        return uid && uid === this.principalSvc.principal()?.id;
+        return uid && uid === this.principal()?.id;
     });
 
     // Icons
     readonly faUserCheck = faUserCheck;
-
-    constructor(
-        private readonly principalSvc: PrincipalService,
-    ) {}
 }

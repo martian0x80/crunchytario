@@ -1,6 +1,9 @@
-import { Component, computed, effect, input } from '@angular/core';
+import { Component, computed, effect, inject, input } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { EMPTY, switchMap } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiGeneralService, User } from '../../../../../generated-api';
 import { ProcessingStatus } from '../../../../_utils/processing-status';
 import { ToastService } from '../../../../_services/toast.service';
@@ -13,9 +16,6 @@ import { PasswordInputComponent } from '../../../tools/password-input/password-i
 import { InfoIconComponent } from '../../../tools/info-icon/info-icon.component';
 import { ValidatableDirective } from '../../../tools/_directives/validatable.directive';
 import { PrincipalService } from '../../../../_services/principal.service';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { EMPTY, switchMap } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 @Component({
     selector: 'app-user-edit',
@@ -31,6 +31,11 @@ import { map } from 'rxjs/operators';
 })
 export class UserEditComponent {
 
+    private readonly router       = inject(Router);
+    private readonly api          = inject(ApiGeneralService);
+    private readonly principalSvc = inject(PrincipalService);
+    private readonly toastSvc     = inject(ToastService);
+
     /** ID of the domain page to edit. */
     readonly id = input<string>();
 
@@ -39,7 +44,7 @@ export class UserEditComponent {
         .pipe(switchMap(id => id ? this.api.userGet(id).pipe(this.loading.processing(), map(r => r.user)) : EMPTY)));
 
     /** Available interface languages. */
-    readonly languages = this.cfgSvc.staticConfig.uiLanguages || [];
+    readonly languages = inject(ConfigService).staticConfig.uiLanguages || [];
 
     /** ID of the currently authenticated user. */
     readonly curUserId = computed(() => this.principalSvc.principal()?.id);
@@ -47,7 +52,7 @@ export class UserEditComponent {
     readonly loading = new ProcessingStatus();
     readonly saving  = new ProcessingStatus();
 
-    readonly form = this.fb.nonNullable.group({
+    readonly form = inject(FormBuilder).nonNullable.group({
         name:       ['', [Validators.required, Validators.minLength(2), Validators.maxLength(63)]],
         email:      ['', [Validators.required, Validators.email, Validators.minLength(6), Validators.maxLength(254)]],
         password:   '',
@@ -58,14 +63,7 @@ export class UserEditComponent {
         superuser:  false,
     });
 
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly router: Router,
-        private readonly api: ApiGeneralService,
-        private readonly cfgSvc: ConfigService,
-        private readonly principalSvc: PrincipalService,
-        private readonly toastSvc: ToastService,
-    ) {
+    constructor() {
         effect(() => {
             const u = this.user();
             if (u) {

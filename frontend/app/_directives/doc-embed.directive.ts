@@ -1,4 +1,4 @@
-import { Directive, effect, ElementRef, input } from '@angular/core';
+import { Directive, effect, ElementRef, input, inject } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { ConfigService } from '../_services/config.service';
 import { HTTP_ERROR_HANDLING } from '../_services/http-error-handler.interceptor';
@@ -8,14 +8,15 @@ import { HTTP_ERROR_HANDLING } from '../_services/http-error-handler.interceptor
 })
 export class DocEmbedDirective {
 
+    private readonly element = inject(ElementRef);
+    private readonly http    = inject(HttpClient);
+
+    private readonly isUnderTest = inject(ConfigService).isUnderTest;
+
     /** URL of the documentation page to embed. */
     readonly appDocEmbed = input<string | undefined>();
 
-    constructor(
-        private readonly element: ElementRef,
-        private readonly http: HttpClient,
-        private readonly cfgSvc: ConfigService,
-    ) {
+    constructor() {
         effect(() => this.render(this.appDocEmbed()));
     }
 
@@ -27,7 +28,7 @@ export class DocEmbedDirective {
         const e = this.element.nativeElement;
 
         // Do not bother requesting pages during an end-2-end test
-        if (this.cfgSvc.isUnderTest) {
+        if (this.isUnderTest) {
             e.innerHTML = `<div class="container py-5 m5-5 border rounded text-center">[${url}]</div>`;
             return;
         }

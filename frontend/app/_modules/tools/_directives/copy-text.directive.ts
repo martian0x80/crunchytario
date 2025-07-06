@@ -1,4 +1,4 @@
-import { Directive, ElementRef, input, Optional, Renderer2 } from '@angular/core';
+import { Directive, ElementRef, input, Renderer2, inject } from '@angular/core';
 import { NgbTooltip } from '@ng-bootstrap/ng-bootstrap';
 
 @Directive({
@@ -9,6 +9,10 @@ import { NgbTooltip } from '@ng-bootstrap/ng-bootstrap';
 })
 export class CopyTextDirective {
 
+    private readonly renderer = inject(Renderer2);
+    private readonly element  = inject(ElementRef);
+    private readonly tooltip  = inject(NgbTooltip, {optional: true});
+
     /**
      * Text that will be copied on a click on the host element. If empty, the text content of the host element will be
      * copied.
@@ -18,21 +22,17 @@ export class CopyTextDirective {
     readonly tipBeforeCopy = $localize`Click to copy`;
     readonly tipAfterCopy  = $localize`Copied!`;
 
-    constructor(
-        renderer: Renderer2,
-        private readonly element: ElementRef,
-        @Optional() private readonly tooltip: NgbTooltip,
-    ) {
+    constructor() {
         // If there's an ngbTooltip directive provided on the same element, use it for the hint
-        if (tooltip) {
-            tooltip.ngbTooltip = this.tipBeforeCopy;
-            tooltip.autoClose = false;
-            tooltip.animation = false;
-            tooltip.container = 'body';
+        if (this.tooltip) {
+            this.tooltip.ngbTooltip = this.tipBeforeCopy;
+            this.tooltip.autoClose = false;
+            this.tooltip.animation = false;
+            this.tooltip.container = 'body';
 
         // Put the hint into the title attribute otherwise
-        } else if (element.nativeElement instanceof HTMLElement) {
-            renderer.setAttribute(element.nativeElement, 'title', this.tipBeforeCopy);
+        } else if (this.element.nativeElement instanceof HTMLElement) {
+            this.renderer.setAttribute(this.element.nativeElement, 'title', this.tipBeforeCopy);
 
         // No valid HTML element
         } else {

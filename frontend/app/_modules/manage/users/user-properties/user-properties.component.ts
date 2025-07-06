@@ -1,4 +1,4 @@
-import { Component, computed, effect, input } from '@angular/core';
+import { Component, computed, effect, input, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -45,6 +45,13 @@ import { PrincipalService } from '../../../../_services/principal.service';
     ],
 })
 export class UserPropertiesComponent {
+
+    private readonly router       = inject(Router);
+    private readonly fb           = inject(FormBuilder);
+    private readonly api          = inject(ApiGeneralService);
+    private readonly principalSvc = inject(PrincipalService);
+    private readonly toastSvc     = inject(ToastService);
+    private readonly configSvc    = inject(ConfigService);
 
     /** ID of the user to display properties for. */
     readonly id = input<string>();
@@ -108,14 +115,7 @@ export class UserPropertiesComponent {
     /** Last loaded session list page number. */
     private loadedSessionsPageNum = 0;
 
-    constructor(
-        private readonly router: Router,
-        private readonly fb: FormBuilder,
-        private readonly api: ApiGeneralService,
-        private readonly principalSvc: PrincipalService,
-        private readonly toastSvc: ToastService,
-        private readonly configSvc: ConfigService,
-    ) {
+    constructor() {
         // Ban and delete confirmation forms: disable Purge comments if Delete comments is off
         [this.banConfirmationForm, this.deleteConfirmationForm]
             .forEach(f => f.controls.deleteComments.valueChanges

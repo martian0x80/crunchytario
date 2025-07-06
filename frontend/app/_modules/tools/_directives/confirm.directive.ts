@@ -1,4 +1,4 @@
-import { Directive, effect, input, output, signal, TemplateRef } from '@angular/core';
+import { Directive, effect, input, output, signal, TemplateRef, inject } from '@angular/core';
 import { noop } from 'rxjs';
 import { faExclamationTriangle, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -11,6 +11,8 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
     }
 })
 export class ConfirmDirective {
+
+    private readonly modal = inject(NgbModal);
 
     /**
      * Optional HTML or template to display in the confirmation dialog. If not provided, the confirmation is silently
@@ -39,9 +41,7 @@ export class ConfirmDirective {
     /** The opened dialog instance, if any. */
     private readonly dlg = signal<ConfirmDialogComponent | undefined>(undefined);
 
-    constructor(
-        private readonly modal: NgbModal,
-    ) {
+    constructor() {
         // Pass directive properties through to the dialog if it's open
         effect(() => {
             const dlg = this.dlg();

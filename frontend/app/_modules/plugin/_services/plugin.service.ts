@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { DOCUMENT, Location } from '@angular/common';
 import { Route, Router } from '@angular/router';
 import { BehaviorSubject, EMPTY, first, forkJoin, materialize, Observable, switchMap, takeWhile, tap, throwError, timeout, timer } from 'rxjs';
@@ -33,19 +33,18 @@ interface PluginConfigAndStatus {
 })
 export class PluginService {
 
+    private readonly doc       = inject<Document>(DOCUMENT);
+    private readonly lang      = inject<Language>(LANGUAGE);
+    private readonly router    = inject(Router);
+    private readonly configSvc = inject(ConfigService);
+
+
     /** Map of plugin config/status entries by plugin ID. */
     private readonly plugins: Record<string, PluginConfigAndStatus> = {};
 
-    constructor(
-        @Inject(DOCUMENT) private readonly doc: Document,
-        @Inject(LANGUAGE) private readonly lang: Language,
-        private readonly router: Router,
-        private readonly configSvc: ConfigService,
-        msgSvc: PluginMessageService,
-    ) {
-        // Include a fake initialiser to prevent service removal. This service must be dependent upon in order to be
-        // instantiated
-        (() => msgSvc)();
+    constructor() {
+        // Inject PluginMessageService to instantiate it
+        inject(PluginMessageService);
     }
 
     /**

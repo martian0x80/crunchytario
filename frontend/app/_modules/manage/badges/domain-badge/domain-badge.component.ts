@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { DomainSelectorService } from '../../_services/domain-selector.service';
 
@@ -14,7 +14,7 @@ import { DomainSelectorService } from '../../_services/domain-selector.service';
     ],
 })
 export class DomainBadgeComponent {
-    constructor(
-        readonly domainSelectorSvc: DomainSelectorService,
-    ) {}
+
+    readonly domainSelectorSvc = inject(DomainSelectorService);
+
 }

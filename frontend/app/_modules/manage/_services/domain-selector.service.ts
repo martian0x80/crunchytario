@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpContext } from '@angular/common/http';
 import { BehaviorSubject, combineLatestWith, Observable, tap } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -59,20 +59,21 @@ export class DomainMeta {
 @Injectable()
 export class DomainSelectorService {
 
+    private readonly principalSvc = inject(PrincipalService);
+    private readonly api = inject(ApiGeneralService);
+    private readonly localSettingSvc = inject(LocalSettingService);
+
     /** Domain loading status. */
     readonly domainLoading = new ProcessingStatus();
 
     private lastId?: string;
     private lastPrincipal?: Principal;
     private principal?: Principal;
+
     private readonly reload$ = new BehaviorSubject<void>(undefined);
     private readonly domainMeta$ = new BehaviorSubject<DomainMeta | undefined>(undefined);
 
-    constructor(
-        private readonly principalSvc: PrincipalService,
-        private readonly api: ApiGeneralService,
-        private readonly localSettingSvc: LocalSettingService,
-    ) {
+    constructor() {
         // Restore the last saved domain, if any
         const settings = this.localSettingSvc.restoreValue<DomainSelectorSettings>('domainSelector');
         if (settings) {

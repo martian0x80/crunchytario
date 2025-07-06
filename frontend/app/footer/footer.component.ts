@@ -1,4 +1,4 @@
-import { Component, computed } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { UntilDestroy } from '@ngneat/until-destroy';
@@ -24,25 +24,20 @@ import { PrincipalService } from '../_services/principal.service';
 })
 export class FooterComponent {
 
-    /** Whether the user is authenticated */
-    readonly isAuthenticated = computed(() => !!this.principalSvc.principal());
+    readonly docsSvc = inject(DocsService);
+    readonly config  = inject(ConfigService).staticConfig;
+
+    /** Authenticated principal, if any. */
+    readonly principal = inject(PrincipalService).principal;
 
     readonly Paths = Paths;
     readonly year = `2022–${new Date().getFullYear()}`;
-    readonly version = this.configSvc.staticConfig.version;
 
     /** UI plugs destined for the footer. */
-    readonly plugs = this.pluginSvc.uiPlugsForLocation('footer.menu');
+    readonly plugs = inject(PluginService).uiPlugsForLocation('footer.menu');
 
     // Icons
     readonly faGitlab   = faGitlab;
     readonly faLinkedin = faLinkedin;
     readonly faXTwitter = faXTwitter;
-
-    constructor(
-        readonly docsSvc: DocsService,
-        readonly configSvc: ConfigService,
-        private readonly principalSvc: PrincipalService,
-        private readonly pluginSvc: PluginService,
-    ) {}
 }

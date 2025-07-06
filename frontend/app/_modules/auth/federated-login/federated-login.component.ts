@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { finalize, first, of, switchMap, throwError, timer } from 'rxjs';
@@ -24,18 +24,15 @@ import { IdentityProviderIconComponent } from '../../tools/identity-provider-ico
 })
 export class FederatedLoginComponent {
 
+    readonly federatedIdps = inject(ConfigService).staticConfig.federatedIdps;
+
+    private readonly router   = inject(Router);
+    private readonly api      = inject(ApiGeneralService);
+    private readonly toastSvc = inject(ToastService);
+    private readonly authSvc  = inject(AuthService);
+    private readonly apiPath  = inject(Configuration).basePath;
+
     loggingIn = false;
-
-    readonly federatedIdps = this.cfgSvc.staticConfig.federatedIdps;
-
-    constructor(
-        private readonly router: Router,
-        private readonly apiConfig: Configuration,
-        private readonly api: ApiGeneralService,
-        private readonly cfgSvc: ConfigService,
-        private readonly toastSvc: ToastService,
-        private readonly authSvc: AuthService,
-    ) {}
 
     loginWith(idp: string) {
         this.loggingIn = true;
@@ -46,7 +43,7 @@ export class FederatedLoginComponent {
                 // Open a login popup
                 map(r => ({
                     popup: window.open(
-                        `${this.apiConfig.basePath}/oauth/${idp}?token=${r.token}`,
+                        `${this.apiPath}/oauth/${idp}?token=${r.token}`,
                         '_blank',
                         'popup,width=800,height=600'),
                     token: r.token,

@@ -1,4 +1,4 @@
-import { Component, effect, input } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { concatMap, Observable, of, tap, toArray } from 'rxjs';
 import { ApiGeneralService, PageStatsItem, StatsDimensionItem } from '../../../../../generated-api';
@@ -29,11 +29,13 @@ type PageViewDimension = 'country' | 'device' | 'browser' | 'os';
 })
 export class StatsComponent {
 
+    private readonly api = inject(ApiGeneralService);
+
     /** ID of the domain to collect the statistics for. If '', statistics for all domains of the current user is collected. */
     readonly domainId = input<string | undefined>();
 
     /** Number of days of statistics to request from the backend. Defaults to the stats retention period configured on the backend */
-    readonly numberOfDays = input<number>(this.configSvc.staticConfig.pageViewStatsMaxDays);
+    readonly numberOfDays = input<number>(inject(ConfigService).staticConfig.pageViewStatsMaxDays);
 
     // Daily stats data
     totalCounts?: Partial<Record<DailyMetric, number>>;
@@ -54,10 +56,7 @@ export class StatsComponent {
     topPagesByComments?: PageStatsItem[];
     readonly loadingTopPages = new ProcessingStatus();
 
-    constructor(
-        private readonly api: ApiGeneralService,
-        private readonly configSvc: ConfigService,
-    ) {
+    constructor() {
         // Initially load the stats, and reload on a property change
         effect(() => this.reload());
     }

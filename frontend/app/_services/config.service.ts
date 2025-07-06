@@ -1,14 +1,8 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, first, Observable, of, ReplaySubject, switchMap, tap, timer } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
 import { NgbConfig, NgbToastConfig } from '@ng-bootstrap/ng-bootstrap';
-import {
-    ApiGeneralService,
-    InstanceConfig,
-    InstancePluginConfig,
-    InstanceStaticConfig,
-    ReleaseMetadata,
-} from '../../generated-api';
+import { ApiGeneralService, InstanceConfig, InstancePluginConfig, InstanceStaticConfig, ReleaseMetadata } from '../../generated-api';
 import { DynamicConfig } from '../_models/config';
 
 declare global {
@@ -23,6 +17,8 @@ declare global {
 })
 export class ConfigService {
 
+    private readonly api = inject(ApiGeneralService);
+
     /**
      * Toast hiding delay in milliseconds.
      */
@@ -31,7 +27,8 @@ export class ConfigService {
     /**
      * Whether the system is running under an end-2-end test.
      */
-    readonly isUnderTest: boolean = false;
+        // Detect if the e2e-test is active
+    readonly isUnderTest = !!window.Cypress;
 
     /**
      * Observable for instance configuration obtained from the server. Supposed to only be used during app
@@ -80,17 +77,10 @@ export class ConfigService {
     private _staticConfig?: InstanceStaticConfig;
     private _pluginConfig?: InstancePluginConfig;
 
-    constructor(
-        ngbConfig: NgbConfig,
-        toastConfig: NgbToastConfig,
-        private readonly api: ApiGeneralService,
-    ) {
-        // Detect if the e2e-test is active
-        this.isUnderTest = !!window.Cypress;
-
+    constructor() {
         // Disable animations with e2e to speed up the tests
-        ngbConfig.animation = !this.isUnderTest;
-        toastConfig.delay = ConfigService.TOAST_DELAY;
+        inject(NgbConfig).animation = !this.isUnderTest;
+        inject(NgbToastConfig).delay = ConfigService.TOAST_DELAY;
     }
 
     /**

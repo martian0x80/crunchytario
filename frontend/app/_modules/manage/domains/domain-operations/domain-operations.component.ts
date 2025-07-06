@@ -1,19 +1,10 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { UntilDestroy, untilDestroyed } from '@ngneat/until-destroy';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
-import {
-    faAngleDown,
-    faCalendarXmark,
-    faCircleQuestion,
-    faClone, faEraser,
-    faFileExport,
-    faFileImport,
-    faSnowflake,
-    faTrashAlt,
-} from '@fortawesome/free-solid-svg-icons';
+import { faAngleDown, faCalendarXmark, faCircleQuestion, faClone, faEraser, faFileExport, faFileImport, faSnowflake, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { NgbCollapseModule } from '@ng-bootstrap/ng-bootstrap';
 import { Paths } from '../../../../_utils/consts';
 import { ApiGeneralService, Domain } from '../../../../../generated-api';
@@ -41,6 +32,13 @@ import { DomainEventService } from '../../_services/domain-event.service';
 })
 export class DomainOperationsComponent implements OnInit {
 
+    private readonly doc               = inject<Document>(DOCUMENT);
+    private readonly router            = inject(Router);
+    private readonly toastSvc          = inject(ToastService);
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+    private readonly domainEventSvc    = inject(DomainEventService);
+
     /** Domain being displayed. */
     domain?: Domain;
 
@@ -54,7 +52,7 @@ export class DomainOperationsComponent implements OnInit {
 
     readonly Paths = Paths;
 
-    readonly purgeForm = this.fb.nonNullable.group({
+    readonly purgeForm = inject(FormBuilder).nonNullable.group({
         markedDeleted:      true,
         userCreatedDeleted: false,
     });
@@ -69,16 +67,6 @@ export class DomainOperationsComponent implements OnInit {
     readonly faFileImport      = faFileImport;
     readonly faSnowflake       = faSnowflake;
     readonly faTrashAlt        = faTrashAlt;
-
-    constructor(
-        @Inject(DOCUMENT) private readonly doc: Document,
-        private readonly router: Router,
-        private readonly fb: FormBuilder,
-        private readonly toastSvc: ToastService,
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly domainEventSvc: DomainEventService,
-    ) {}
 
     get freezeAction(): string {
         return this.domain?.isReadonly ? $localize`Unfreeze` : $localize`Freeze`;

@@ -1,4 +1,4 @@
-import { Component, effect, input } from '@angular/core';
+import { Component, effect, inject, input } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, merge, mergeWith, Subject, switchMap, tap } from 'rxjs';
@@ -51,6 +51,12 @@ import { SortableViewSettings } from '../../../_models/view';
 })
 export class CommentListComponent {
 
+    private readonly api               = inject(ApiGeneralService);
+    private readonly domainSelectorSvc = inject(DomainSelectorService);
+    private readonly configSvc         = inject(ConfigService);
+    private readonly localSettingSvc   = inject(LocalSettingService);
+    private readonly commentService    = inject(CommentService);
+
     /** Optional page ID to load comments for. If not provided, all comments for the current domain will be loaded. */
     readonly pageId = input<string>();
 
@@ -77,7 +83,7 @@ export class CommentListComponent {
     readonly commentsLoading = new ProcessingStatus();
     readonly commentUpdating = new ProcessingStatus();
 
-    readonly filterForm = this.fb.nonNullable.group({
+    readonly filterForm = inject(FormBuilder).nonNullable.group({
         approved: true,
         pending:  true,
         rejected: true,
@@ -93,16 +99,9 @@ export class CommentListComponent {
 
     private loadedPageNum = 0;
 
-    constructor(
-        private readonly fb: FormBuilder,
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorSvc: DomainSelectorService,
-        private readonly configSvc: ConfigService,
-        private readonly localSettingSvc: LocalSettingService,
-        private readonly commentService: CommentService,
-    ) {
+    constructor() {
         // Restore the view settings
-        localSettingSvc.load<SortableViewSettings>('commentList').subscribe(s => s?.sort && (this.sort.asString = s.sort));
+        this.localSettingSvc.load<SortableViewSettings>('commentList').subscribe(s => s?.sort && (this.sort.asString = s.sort));
 
         // Reload on property changes
         effect(() => this.reload());

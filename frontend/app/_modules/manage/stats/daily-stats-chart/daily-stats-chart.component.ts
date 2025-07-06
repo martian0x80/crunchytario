@@ -1,4 +1,4 @@
-import { Component, computed, Inject, input, LOCALE_ID } from '@angular/core';
+import { Component, computed, input, LOCALE_ID, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
@@ -34,9 +34,7 @@ export class DailyStatsChartComponent {
     readonly chartOptionsViews    = computed<ChartOptions | undefined>(() => this.getChartOptions(this.chartDataViews()?.labels as any));
     readonly chartOptionsComments = computed<ChartOptions | undefined>(() => this.getChartOptions(this.chartDataComments()?.labels as any));
 
-    constructor(
-        @Inject(LOCALE_ID) private readonly locale: string,
-    ) {}
+    private readonly datePipe = new DatePipe(inject(LOCALE_ID));
 
     private getChartConfig(data: number[] | undefined, label: string, colour: string): ChartConfiguration['data'] | undefined {
         return data ?
@@ -80,16 +78,14 @@ export class DailyStatsChartComponent {
     }
 
     private getDates(count: number): string[] {
-        const r: string[] = [];
-        const dp = new DatePipe(this.locale);
-
         // Begin from (today - count days)
         const d = new Date();
         d.setDate(d.getDate() - count + 1);
 
         // Add count items, moving forward in time
+        const r: string[] = [];
         for (let i = 0; i < count; i++) {
-            r.push(dp.transform(d, 'shortDate') || '');
+            r.push(this.datePipe.transform(d, 'shortDate') || '');
             d.setDate(d.getDate() + 1);
         }
         return r;

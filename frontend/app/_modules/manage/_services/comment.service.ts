@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, combineLatestWith, Observable, of, switchMap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { DomainSelectorService } from './domain-selector.service';
@@ -9,10 +9,12 @@ import { ApiGeneralService } from '../../../../generated-api';
 })
 export class CommentService {
 
+    private readonly api = inject(ApiGeneralService);
+
     private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
     /** Number of comments pending moderation for the current domain. */
-    readonly countPending: Observable<number> = this.domainSelectorService.domainMeta(true)
+    readonly countPending: Observable<number> = inject(DomainSelectorService).domainMeta(true)
         .pipe(
             // Trigger a reload on request
             combineLatestWith(this.refresh$),
@@ -22,11 +24,6 @@ export class CommentService {
                 of(0)),
             // Do not let error seep through
             catchError(() => of(0)));
-
-    constructor(
-        private readonly api: ApiGeneralService,
-        private readonly domainSelectorService: DomainSelectorService,
-    ) {}
 
     /**
      * Trigger a reload of the comment count.

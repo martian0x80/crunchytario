@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProcessingStatus } from '../../../../_utils/processing-status';
@@ -25,24 +25,22 @@ import { ValidatableDirective } from '../../../tools/_directives/validatable.dir
 })
 export class EmailUpdateComponent {
 
+    private readonly router   = inject(Router);
+    private readonly toastSvc = inject(ToastService);
+    private readonly api      = inject(ApiGeneralService);
+    private readonly authSvc  = inject(AuthService);
+
     /** Whether the form has been submitted and an email confirmation is expected. */
     submitted = false;
 
     readonly submitting = new ProcessingStatus();
-    readonly form = this.fb.nonNullable.group({
+
+    readonly form = inject(FormBuilder).nonNullable.group({
         email:    ['', [Validators.required, Validators.email, Validators.minLength(6), Validators.maxLength(254)]],
         password: '',
     });
 
     readonly Paths = Paths;
-
-    constructor(
-        private readonly router: Router,
-        private readonly fb: FormBuilder,
-        private readonly toastSvc: ToastService,
-        private readonly api: ApiGeneralService,
-        private readonly authSvc: AuthService,
-    ) {}
 
     submit() {
         // Mark all controls touched to display validation results

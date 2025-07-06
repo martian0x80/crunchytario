@@ -1,4 +1,4 @@
-import { Directive, effect, ElementRef, input, OnInit, Renderer2 } from '@angular/core';
+import { Directive, effect, ElementRef, input, OnInit, Renderer2, inject } from '@angular/core';
 
 /**
  * Directive that forces a link to open in a new tab.
@@ -8,13 +8,13 @@ import { Directive, effect, ElementRef, input, OnInit, Renderer2 } from '@angula
 })
 export class ExternalLinkDirective implements OnInit {
 
+    private readonly element  = inject<ElementRef<HTMLAnchorElement>>(ElementRef);
+    private readonly renderer = inject(Renderer2);
+
     /** The URL to point to. */
     readonly appExternalLink = input<string | null>();
 
-    constructor(
-        private readonly element: ElementRef<HTMLAnchorElement>,
-        private readonly renderer: Renderer2,
-    ) {
+    constructor() {
         effect(() => this.renderer.setAttribute(this.element.nativeElement, 'href', this.appExternalLink() ?? ''));
     }
 
