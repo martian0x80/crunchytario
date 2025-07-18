@@ -12,9 +12,9 @@
         "test:ci": "gulp test"
     },
     "private": true,
-    "dependencies": {},
     "devDependencies": {
         "@popperjs/core": "^2.11.8",
+        "comentario-frontend": "3.0.0",
         "gulp": "^5.0.1",
         "gulp-clean-css": "^4.3.0",
         "gulp-cli": "^3.1.0",

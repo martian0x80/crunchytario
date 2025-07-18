@@ -5,16 +5,11 @@
     "private": true,
     "scripts": {
         "clean": "rm -rf ../build/docs/",
-        "build": "hugo -DF --gc --minify --environment=edge",
-        "build:prod": "hugo --gc --minify --environment=production",
-        "postbuild": "npm run write-headers",
-        "postbuild:prod": "npm run write-headers",
-        "prebuild": "npm run clean",
-        "prebuild:prod": "npm run clean",
+        "build": "yarn run clean && hugo -DF --gc --minify --environment=edge && yarn run write-headers",
+        "build:prod": "yarn run clean && hugo --gc --minify --environment=production && yarn run write-headers",
         "start": "hugo server -DFO",
         "write-headers": "echo '/*\\n  Access-Control-Allow-Origin: *' > ../build/docs/_headers"
     },
-    "dependencies": {},
     "devDependencies": {
         "@fortawesome/fontawesome-free": "^6.7.2",
         "@popperjs/core": "^2.11.8",

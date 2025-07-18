@@ -1,6 +1,6 @@
 #=======================================================================================================================
 # Dockerfile to build Comentario Alpine-based image.
-# It assumes the frontend and the backend are built (using `npm run build` and `goreleaser release`, accordingly).
+# It assumes the frontend and the backend are built (using `yarn run build` and `goreleaser release`, accordingly).
 #=======================================================================================================================
 FROM alpine:3
 

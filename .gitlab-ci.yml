@@ -27,7 +27,7 @@ stages:
   - post-deploy
 
 variables:
-  CI_TOOLS_VERSION: "v49"
+  CI_TOOLS_VERSION: "v50"
   DEPLOYER_IMAGE: "alpine/k8s:1.31.5"
   # Namespace to deploy Kubernetes objects into
   NAMESPACE: ys-comentario
@@ -72,27 +72,56 @@ build:
       # Backend
       - .go/pkg/mod/
       # Frontend
-      - .yarn-cache/
+      - .yarn/
   before_script:
     # Create the required dirs
     - mkdir -p build .go
   script:
+    #-------------------------------------------------------------------------------------------------------------------
     # Backend build
-    - go generate               # Generate code
-    - go mod download           # Fetch the dependencies explicitly (not exactly necessary, but makes it easier to spot problems)
-    - test -z "$(go fmt ./...)" # Make sure there are no formatting issues
-    - go vet ./...              # Look for code quirks
-    - go test -v ./...          # Run unit tests
+    #-------------------------------------------------------------------------------------------------------------------
 
+    # Generate code
+    - go generate
+
+    # Fetch the dependencies explicitly (not exactly necessary, but makes it easier to spot problems)
+    - go mod download
+
+    # Make sure there are no formatting issues
+    - test -z "$(go fmt ./...)"
+
+    # Look for code quirks
+    - go vet ./...
+
+    # Run unit tests
+    - go test -v ./...
+
+    #-------------------------------------------------------------------------------------------------------------------
     # Frontend build
-    - yarn install 
-        --frozen-lockfile 
-        --no-progress 
-        --cache-folder .yarn-cache    # Fetch the dependencies
-    - yarn run generate               # Generate the API client
-    - yarn run lint                   # Lint
-    - yarn run test:ci                # Run unit tests
-    - yarn run build:prod             # Build
+    #-------------------------------------------------------------------------------------------------------------------
+
+    # Configure yarn
+    - yarn config set nodeLinker        'node-modules'
+    - yarn config set enableGlobalCache 'false'
+    - yarn config set cacheFolder       "$CI_PROJECT_DIR/.yarn"
+
+    # Diagnostic output
+    - yarn config
+
+    # Install dependencies
+    - yarn install --immutable
+
+    # Generate the API client
+    - yarn run generate
+
+    # Lint the code
+    - yarn run lint
+
+    # Run unit tests
+    - yarn run test:ci
+
+    # Build
+    - yarn run build:prod
 
     # Debug output
     - git status -v

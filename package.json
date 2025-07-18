@@ -6,17 +6,16 @@
     "license": "MIT",
     "private": true,
     "scripts": {
-        "build": "npm run -w frontend build && npm run -w embed build && npm run -w docs build",
-        "build:prod": "npm run -w frontend build:prod && npm run -w embed build:prod && npm run -w docs build:prod",
+        "build": "yarn workspaces foreach --topological-dev -W run build",
+        "build:prod": "yarn workspaces foreach --topological-dev -W run build:prod",
         "cy": "cypress open --e2e --browser chrome",
         "cy:ci": "cypress run --config video=false",
-        "generate": "npm run -w frontend generate",
-        "lint": "npm run -w frontend lint && npm run -w embed lint",
-        "ng": "npm run -w frontend ng",
-        "start": "npm run -w frontend start",
-        "test": "npm run -w frontend test",
-        "test:embed": "npm run -w embed test",
-        "test:ci": "npm run -w frontend test:ci && npm run -w embed test:ci"
+        "generate": "yarn workspace comentario-frontend run generate",
+        "lint": "yarn workspaces foreach -W -p run lint",
+        "ng": "yarn workspace comentario-frontend run ng",
+        "start": "yarn workspace comentario-frontend run start",
+        "test": "yarn workspace comentario-frontend run test",
+        "test:ci": "yarn workspaces foreach -W -p run test:ci"
     },
     "workspaces": [
         "embed",
@@ -32,7 +31,7 @@
         "@typescript-eslint/types": "^8.35.1",
         "@typescript-eslint/utils": "^8.35.1",
         "cypress": "^14.5.1",
-        "cypress-terminal-report" : "^7.2.0",
+        "cypress-terminal-report": "^7.2.0",
         "eslint": "^9.30.1",
         "eslint-plugin-cypress": "^5.1.0",
         "eslint-plugin-import": "^2.32.0",
@@ -44,5 +43,6 @@
         "typescript": "~5.8.3",
         "typescript-eslint": "^8.35.1",
         "yamljs": "^0.3.0"
-    }
+    },
+    "packageManager": "yarn@4.9.2"
 }

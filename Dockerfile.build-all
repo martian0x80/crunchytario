@@ -54,12 +54,16 @@ RUN apk add --no-cache --update openjdk${OPENJDK_VERSION}-jre-headless
 COPY . /comentario
 WORKDIR /comentario
 RUN rm -rf build && \
+    # Configure yarn \
+    corepack enable && \
+    corepack yarn set version berry && \
+    yarn config set nodeLinker 'node-modules' && \
     # Install dependencies
-    yarn install --frozen-lockfile && \
+    yarn install --immutable && \
     # Build frontend
-    cd /comentario/frontend && yarn run generate && yarn run build:prod && \
-    # Build embed
-    cd /comentario/embed && yarn run build:prod
+    yarn run generate && \
+    yarn workspace comentario-frontend run build:prod && \
+    yarn workspace comentario-embed run build:prod
 
 # Final image
 FROM alpine:3
