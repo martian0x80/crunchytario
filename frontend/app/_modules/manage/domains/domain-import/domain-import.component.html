@@ -75,7 +75,7 @@
                     <!-- Invalid feedback -->
                     <div class="invalid-feedback">
                         @if (c.errors?.required) { <div i18n>Please select a file.</div> }
-                        @if (c.errors?.maxSize)  { <div i18n>File size must not exceed 10 MB.</div> }
+                        @if (c.errors?.maxSize)  { <div i18n>File size must not exceed {{ maxFileSize | number }} bytes.</div> }
                     </div>
                     <!-- Info -->
                     <div class="form-text" i18n>Comentario supports importing from .zip and .gz archives, as well as uncompressed files.</div>

@@ -5,7 +5,7 @@ import { FontAwesomeTestingModule } from '@fortawesome/angular-fontawesome/testi
 import { MockComponents, MockProvider } from 'ng-mocks';
 import { DomainImportComponent } from './domain-import.component';
 import { ApiGeneralService } from '../../../../../generated-api';
-import { mockDomainSelector } from '../../../../_utils/_mocks.spec';
+import { mockConfigService, mockDomainSelector } from '../../../../_utils/_mocks.spec';
 import { InfoIconComponent } from '../../../tools/info-icon/info-icon.component';
 
 describe('DomainImportComponent', () => {
@@ -25,6 +25,7 @@ describe('DomainImportComponent', () => {
                 providers: [
                     MockProvider(ApiGeneralService),
                     mockDomainSelector(),
+                    mockConfigService(),
                 ],
             })
             .compileComponents();

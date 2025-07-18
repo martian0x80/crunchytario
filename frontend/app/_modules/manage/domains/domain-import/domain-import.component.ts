@@ -14,6 +14,7 @@ import { XtraValidators } from '../../../../_utils/xtra-validators';
 import { InfoIconComponent } from '../../../tools/info-icon/info-icon.component';
 import { SpinnerDirective } from '../../../tools/_directives/spinner.directive';
 import { ValidatableDirective } from '../../../tools/_directives/validatable.directive';
+import { ConfigService } from '../../../../_services/config.service';
 
 @UntilDestroy()
 @Component({
@@ -37,6 +38,8 @@ export class DomainImportComponent implements OnInit {
     private readonly api               = inject(ApiGeneralService);
     private readonly domainSelectorSvc = inject(DomainSelectorService);
 
+    readonly maxFileSize = inject(ConfigService).staticConfig.maxImportFileSize;
+
     /** Target domain. */
     domain?: Domain;
 
@@ -47,7 +50,7 @@ export class DomainImportComponent implements OnInit {
     readonly importing = new ProcessingStatus();
     readonly form = inject(FormBuilder).nonNullable.group({
         source: ['comentario' as 'comentario' | 'disqus' | 'wordpress', [Validators.required]],
-        file:   [undefined as any, [Validators.required, XtraValidators.maxSize(10 * 1024 * 1024)]],
+        file:   [undefined as any, [Validators.required, XtraValidators.maxSize(this.maxFileSize)]],
     });
 
     // Icons

@@ -25,6 +25,7 @@ export const mockConfigService = () => MockProvider(
             resultPageSize:       25,
             uiLanguages:          [{id: 'en', nameEnglish: 'English', nameNative: 'English', isFrontendLanguage: true}],
             liveUpdateEnabled:    true,
+            maxImportFileSize:    2000,
             pageViewStatsEnabled: true,
             pageViewStatsMaxDays: 42,
         },

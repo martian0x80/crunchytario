@@ -52,6 +52,7 @@ var (
 	ErrorIdPUnknown            = &Error{ID: "idp-unknown", Message: "Unknown identity provider"}
 	ErrorImmutableAccount      = &Error{ID: "immutable-account", Message: "Account cannot be updated"}
 	ErrorImmutableProperty     = &Error{ID: "immutable-property", Message: "Property cannot be updated"}
+	ErrorInputTooLarge         = &Error{ID: "input-too-large", Message: "Input data is too large"}
 	ErrorInvalidCredentials    = &Error{ID: "invalid-credentials", Message: "Wrong password or user doesn't exist"}
 	ErrorInvalidInputData      = &Error{ID: "invalid-input-data", Message: "Invalid input data provided"}
 	ErrorInvalidPropertyValue  = &Error{ID: "invalid-prop-value", Message: "Value of the property is invalid"}

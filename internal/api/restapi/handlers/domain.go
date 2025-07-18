@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"fmt"
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -11,6 +12,7 @@ import (
 	"gitlab.com/comentario/comentario/internal/api/exmodels"
 	"gitlab.com/comentario/comentario/internal/api/models"
 	"gitlab.com/comentario/comentario/internal/api/restapi/operations/api_general"
+	"gitlab.com/comentario/comentario/internal/config"
 	"gitlab.com/comentario/comentario/internal/data"
 	"gitlab.com/comentario/comentario/internal/persistence"
 	"gitlab.com/comentario/comentario/internal/svc"
@@ -145,6 +147,18 @@ func DomainGet(params api_general.DomainGetParams, user *data.User) middleware.R
 
 func DomainImport(params api_general.DomainImportParams, user *data.User) middleware.Responder {
 	defer util.LogError(params.Data.Close, "DomainImport, defer Data.Close()")
+
+	// Validate input file size
+	file := params.Data.(*runtime.File).Data
+	if size, err := file.Seek(0, io.SeekEnd); err != nil {
+		logger.Warningf("DomainImport(): failed to seek to input file end: %v", err)
+		return respInternalError(nil)
+	} else if size > int64(config.ServerConfig.MaxImportFileSize) {
+		return respBadRequest(exmodels.ErrorInputTooLarge.WithDetails(fmt.Sprintf("%d > %d", size, int(config.ServerConfig.MaxImportFileSize))))
+	} else if _, err := file.Seek(0, io.SeekStart); err != nil {
+		logger.Warningf("DomainImport(): failed to seek to input file start: %v", err)
+		return respInternalError(nil)
+	}
 
 	// Read the entire data buffer into memory
 	expData, err := io.ReadAll(params.Data)

@@ -670,6 +670,7 @@ definitions:
       - liveUpdateEnabled
       - pageViewStatsEnabled
       - pageViewStatsMaxDays
+      - maxImportFileSize
     properties:
       baseUrl:
         type: string
@@ -746,6 +747,12 @@ definitions:
         x-omitempty: false
         x-isnullable: false
         description: Maximum number of days page view statistics gets retained for
+      maxImportFileSize:
+        type: integer
+        format: uint
+        x-omitempty: false
+        x-isnullable: false
+        description: Maximum size of the import file, in bytes
 
   keyValueMap:
     description: Map of key-value strings
@@ -3218,7 +3225,6 @@ paths:
         - in: formData
           name: data
           type: file
-          maxLength: 10485760 # 10 MiB
           required: true
           description: Import data file
       responses:
