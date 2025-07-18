@@ -1,6 +1,6 @@
 import { computed, Injectable } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { BehaviorSubject, Observable, ReplaySubject } from 'rxjs';
+import { Observable, ReplaySubject } from 'rxjs';
 import { Principal } from '../../generated-api';
 
 /**
@@ -23,6 +23,6 @@ export class PrincipalService {
 
     /** Set the current principal value, or remove it if `undefined` is passed. */
     setPrincipal(p: Principal | undefined) {
-        (this.principal$ as BehaviorSubject<Principal | undefined>).next(p);
+        (this.principal$ as ReplaySubject<Principal | undefined>).next(p);
     }
 }

@@ -1,7 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpContext } from '@angular/common/http';
 import { finalize, Observable, of, tap } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 import { ApiGeneralService, Configuration, Principal } from '../../generated-api';
 import { HTTP_ERROR_HANDLING } from './http-error-handler.interceptor';
 import { PrincipalService } from './principal.service';
@@ -19,7 +19,7 @@ export class AuthService {
     afterLoginRedirectUrl?: string;
 
     constructor() {
-        // Initially fetch a user
+        // Initially fetch the currently authenticated principal
         this.update();
     }
 
@@ -30,11 +30,8 @@ export class AuthService {
      */
     login(email: string, password: string): Observable<Principal> {
         return this.api.authLogin({email, password})
-            .pipe(map(p => {
-                // Store the returned principal
-                this.principalSvc.setPrincipal(p);
-                return p;
-            }));
+            // Store the returned principal
+            .pipe(tap(p => this.principalSvc.setPrincipal(p)));
     }
 
     /**
