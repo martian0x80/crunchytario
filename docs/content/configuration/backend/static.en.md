@@ -29,7 +29,7 @@ Some command-line options have an equivalent setting in the form of an environme
 ./comentario -h
 ```
 
-## Usage
+## Synopsis
 
 ```bash
 comentario [OPTIONS]
@@ -37,60 +37,140 @@ comentario [OPTIONS]
 
 ## Options
 
-Below is a list of available command-line options, with their environment equivalents.
+Below is a list of available command-line options, with their environment equivalents (names starting with a `$`).
 
-<div class="table-responsive">
+`-h`, `--help`
+: Show help message (option summary) and exit.
 
-| Option                       | Description                                                           | Environment variable    | Default value                                                 |
-|------------------------------|-----------------------------------------------------------------------|-------------------------|---------------------------------------------------------------|
-| `-h`, `--help`               | Show help message (option summary) and exit                           |                         |                                                               |
-| `--cleanup-timeout=VALUE`    | Grace period for which to wait before killing idle connections        |                         | `10s`                                                         |
-| `--graceful-timeout=VALUE`   | Grace period for which to wait before shutting down the server        |                         | `15s`                                                         |
-| `--max-header-size=VALUE`    | Maximum number of bytes to read for request header (not request body) |                         | `1MiB`                                                        |
-| `--socket-path=VALUE`        | The unix socket to listen on                                          |                         | `/var/run/comentario.sock`                                    |
-| `--host=VALUE`               | The IP to listen on                                                   | `$HOST`                 | `localhost`                                                   |
-| `--port=VALUE`               | The port to listen on                                                 | `$PORT`                 | Random port number                                            |
-| `--listen-limit=VALUE`       | Limits the number of outstanding requests                             |                         |                                                               |
-| `--keep-alive=VALUE`         | Sets the TCP keep-alive timeouts on accepted connections              |                         | `3m`                                                          |
-| `--read-timeout=VALUE`       | Maximum duration before timing out read of the request                |                         | `30s`                                                         |
-| `--write-timeout=VALUE`      | Maximum duration before timing out write of the response              |                         | `60s`                                                         |
-| `-v`, `--verbose`            | Verbose logging (use `-vv` for debug logging)                         |                         |                                                               |
-| `--no-color`                 | Disable log colouring                                                 | `$NO_COLOR`             |                                                               |
-| `--base-url=VALUE`           | Server's own [base URL](/kb/base-url)                                 | `$BASE_URL`             | `http://localhost:8080`                                       |
-| `--base-docs-url=VALUE`      | Base documentation URL                                                | `$BASE_DOCS_URL`        | `https://docs.comentario.app`                                 |
-| `--tos-url=VALUE`            | URL of the Terms of Service page                                      | `$TOS_URL`              | `<base docs URL>/en/legal/tos/`                               |
-| `--privacy-policy-url=VALUE` | URL of the Privacy Policy page                                        | `$PRIVACY_POLICY_URL`   | `<base docs URL>/en/legal/privacy/`                           |
-| `--cdn-url=VALUE`            | Static file CDN URL                                                   | `$CDN_URL`              | The base URL                                                  |
-| `--email-from=VALUE`         | 'From' address in sent emails                                         | `$EMAIL_FROM`           | SMTP username (`smtpServer.username` [secret](secrets) value) |
-| `--db-idle-conns=VALUE`      | Max. number of idle DB connections                                    | `$DB_MAX_IDLE_CONNS`    | `50`                                                          |
-| `--disable-xsrf`             | Disable XSRF protection (for development purposes only)               |                         |                                                               |
-| `--enable-swagger-ui`        | Enable Swagger UI at `/api/docs`                                      |                         |                                                               |
-| `--static-path=VALUE`        | Path to static files                                                  | `$STATIC_PATH`          | `.`                                                           |
-| `--db-migration-path=VALUE`  | Path to DB migration files                                            | `$DB_MIGRATION_PATH`    | `.`                                                           |
-| `--db-debug`                 | Enable database debug logging                                         |                         |                                                               |
-| `--template-path=VALUE`      | Path to template files                                                | `$TEMPLATE_PATH`        | `.`                                                           |
-| `--secrets=VALUE`            | Path to YAML file with secrets                                        | `$SECRETS_FILE`         | `secrets.yaml`                                                |
-| `--superuser=VALUE`          | UUID or email of a user to become a superuser                         | `$SUPERUSER`            |                                                               |
-| `--log-full-ips`             | Log IP addresses in full                                              | `$LOG_FULL_IPS`         |                                                               |
-| `--home-content-url=VALUE`   | URL of a HTML page to display on homepage                             | `$HOME_CONTENT_URL`     |                                                               |
-| `--gitlab-url=VALUE`         | Custom GitLab URL for authentication                                  | `$GITLAB_URL`           |                                                               |
-| `--no-live-update`           | Disable [live updates](/kb/live-update) via WebSockets                | `$NO_LIVE_UPDATE`       |                                                               |
-| `--no-page-view-stats`       | Disable page view statistics gathering and reporting                  | `$NO_PAGE_VIEW_STATS`   |                                                               |
-| `--stats-max-days`           | Statistics retention and reporting period, in days                    | `$STATS_MAX_DAYS`       | `30`                                                          |
-| `--max-import-file-size`     | Maximum import file size (can use suffix such as `B` or `MB`)         | `$MAX_IMPORT_FILE_SIZE` | `10MiB`                                                       |
-| `--ws-max-clients=VALUE`     | Maximum number of WebSocket clients                                   | `$WS_MAX_CLIENTS`       | `10000`                                                       |
-| `--e2e`                      | Start server in end-to-end testing mode                               |                         |                                                               |
-{.table .table-striped}
-</div>
+`--cleanup-timeout`=VALUE
+: Grace period for which to wait before killing idle connections.
+: *Default value:* `10s`
 
-### Documentation
+`--graceful-timeout`=VALUE
+: Grace period for which to wait before shutting down the server.
+: *Default value:* `15s`
 
-Comentario provides numerous links to various docpages in its frontend and the embedded part. The base URL of the documentation site points to Comentario production documentation by default.
+`--max-header-size`=VALUE
+: Maximum number of bytes to read for request header (not request body).
+: *Default value:* `1MiB`
 
-### Legal pages
+`--socket-path`=VALUE
+: The unix socket to listen on.
+: *Default value:* `/var/run/comentario.sock`
 
-Comentario provides users with links to the **Terms of Service** and the **Privacy Policy** pages; apart from being required by law in most cases, these pages are often mandatory when configuring [federated authentication](../idps) via an external service.
+`--host`=VALUE, `$HOST`
+: The IP to listen on. If you want to accept connections from any network interface, use value `0.0.0.0`.
+: *Default value:* `localhost`
 
-By default, these point to the [Terms of Service](/legal/tos) and the [Privacy Policy](/legal/privacy) on the documentation website, respectively.
+`--port`=VALUE, `$PORT`
+: The port to listen on.
+: *Default value:* *Random port number*
 
-If you apply your own policies, you should reconfigure Comentario using the `--tos-url` and `--privacy-policy-url` parameters listed above. These pages have to be hosted elsewhere as Comentario provides no means for storing them at the moment.
+`--listen-limit`=VALUE
+: Limits the number of outstanding requests.
+
+`--keep-alive`=VALUE
+: Sets the TCP keep-alive timeouts on accepted connections.
+: *Default value:* `3m`
+
+`--read-timeout`=VALUE
+: Maximum duration before timing out read of the request.
+: *Default value:* `30s`
+
+`--write-timeout`=VALUE
+: Maximum duration before timing out write of the response.
+: *Default value:* `60s`
+
+`-v`, `--verbose`
+: Verbose logging (use `-vv` for debug logging).
+
+`--no-color`, `$NO_COLOR`
+: Disable log colouring
+
+`--base-url`=VALUE, `$BASE_URL`
+: Server's own [base URL](/kb/base-url).
+: *Default value:* `http://localhost:8080`
+
+`--base-docs-url`=VALUE, `$BASE_DOCS_URL`
+: Base documentation URL. Comentario provides numerous links to various docpages in the Admin UI and the embedded part. The base URL of the documentation site points to Comentario production documentation by default.
+: *Default value:* `https://docs.comentario.app`
+
+`--tos-url`=VALUE, `$TOS_URL`
+: URL of the Terms of Service page. Comentario provides users with links to the **Terms of Service** page in a number of places. Apart from being required by law in many countries, such a page is often mandatory when configuring [federated authentication](../idps) via an external service. By default, the [](/legal/tos) URL on the documentation website (see `--base-docs-url` above) is used.
+: If you apply your own policies, you should reconfigure Comentario to using your own page URL. This page has to be hosted elsewhere as Comentario provides no means for storing it at the moment.
+: *Default value:* `<base docs URL>/en/legal/tos/`
+
+`--privacy-policy-url`=VALUE, `$PRIVACY_POLICY_URL`
+: URL of the Privacy Policy page. Comentario provides users with links to the **Privacy** page in a number of places. Apart from being required by law in many countries, such a page is often mandatory when configuring [federated authentication](../idps) via an external service. By default, the [](/legal/privacy) URL on the documentation website (see `--base-docs-url` above) is used.
+: If you apply your own policies, you should reconfigure Comentario to using your own page URL. This page has to be hosted elsewhere as Comentario provides no means for storing it at the moment.
+: *Default value:* `<base docs URL>/en/legal/privacy/`
+
+`--cdn-url`=VALUE, `$CDN_URL`
+: Static file CDN URL.
+: *Default value:* The [base URL](/kb/base-url)
+
+`--email-from`=VALUE, `$EMAIL_FROM`
+: 'From' address in sent emails.
+: *Default value:* SMTP username (`smtpServer.username` [secret](secrets) value)
+
+`--db-idle-conns`=VALUE, `$DB_MAX_IDLE_CONNS`
+: Maximum number of idle DB connections.
+: *Default value:* `50`
+
+`--disable-xsrf`
+: Disable XSRF protection. This option is meant for development purposes only; each production environment should have XSRF protection activated.
+
+`--enable-swagger-ui`
+: Enable Swagger UI at `/api/docs`.
+
+`--static-path`=VALUE, `$STATIC_PATH`
+: Path to static files.
+: *Default value:* `.`
+
+`--db-migration-path`=VALUE, `$DB_MIGRATION_PATH`
+: Path to DB migration files.
+: *Default value:* `.`
+
+`--db-debug`
+: Enable database debug logging. This option is meant for development purposes only.
+
+`--template-path`=VALUE, `$TEMPLATE_PATH`
+: Path to template files.
+: *Default value:* `.`
+
+`--secrets`=VALUE, `$SECRETS_FILE`
+: Path to YAML file with [secrets](secrets).
+: *Default value:* `secrets.yaml`
+
+`--superuser`=VALUE, `$SUPERUSER`
+: UUID or email of a user to become a [superuser](/kb/permissions/superuser).
+
+`--log-full-ips`, `$LOG_FULL_IPS`
+: Log IP addresses in full. If this options is omitted, only the first two bytes of IP addresses will be stored in corresponding fields, such as user's signup IP. This applies to both IPv4 (e.g. `172.168.x.x`) and IPv6 (e.g. `692e:eace:x:x:x:x:x:x`) addresses.
+
+`--home-content-url`=VALUE, `$HOME_CONTENT_URL`
+: URL of a HTML page to display on homepage.
+
+`--gitlab-url`=VALUE, `$GITLAB_URL`
+: Custom GitLab URL for authentication.
+
+`--no-live-update`, `$NO_LIVE_UPDATE`
+: Disable [live updates](/kb/live-update) via WebSockets.
+
+`--no-page-view-stats`, `$NO_PAGE_VIEW_STATS`
+: Disable page view statistics gathering and reporting.
+
+`--stats-max-days`, `$STATS_MAX_DAYS`
+: Statistics retention and reporting period, in days.
+: *Default value:* `30`
+
+`--max-import-file-size`, `$MAX_IMPORT_FILE_SIZE`
+: Maximum import file size. This can be either a number of bytes, or a number followed by a unit (`B`=bytes, `KB`=kilobytes, `MB`=megabytes etc.).
+: *Default value:* `10MiB`
+
+`--ws-max-clients`=VALUE, `$WS_MAX_CLIENTS`
+: Maximum number of WebSocket clients available for [](/kb/live-update).
+: *Default value:* `10000`
+
+`--e2e`
+: Start server in the end-to-end testing mode. This option is meant for development purposes only.
