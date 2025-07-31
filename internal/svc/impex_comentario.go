@@ -174,6 +174,7 @@ func comentarioImportV1(curUser *data.User, domain *data.Domain, buf []byte) *Im
 			"", // Local auth only
 			commenter.Name,
 			commenter.WebsiteURL,
+			commenter.AvatarURL,
 			"Imported from Commento/Comentario",
 			true,
 			false, // No SSO flag support in the export
@@ -339,6 +340,7 @@ func comentarioImportV3(curUser *data.User, domain *data.Domain, buf []byte) *Im
 			string(commenter.FederatedIDP),
 			commenter.Name,
 			string(commenter.WebsiteURL),
+			"", // Avatar URL isn't available
 			"Imported from Comentario V3",
 			true,
 			commenter.FederatedSso,

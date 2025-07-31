@@ -120,7 +120,7 @@ func insertCommentsForParent(parentID uuid.UUID, commentParentMap map[uuid.UUID]
 }
 
 // importUserByEmail adds the specified user/domain user, returning the user and whether user and domain user were added
-func importUserByEmail(email, federatedIdpID, name, websiteURL, remarks string, realEmail, federatedSSO bool, curUserID, domainID *uuid.UUID, creationTime time.Time) (*data.User, bool, bool, error) {
+func importUserByEmail(email, federatedIdpID, name, websiteURL, avatarURL, remarks string, realEmail, federatedSSO bool, curUserID, domainID *uuid.UUID, creationTime time.Time) (*data.User, bool, bool, error) {
 	// Try to find an existing user with the same email
 	var user *data.User
 	if u, err := Services.UserService(nil).FindUserByEmail(email); err == nil {
@@ -156,9 +156,13 @@ func importUserByEmail(email, federatedIdpID, name, websiteURL, remarks string, 
 			return nil, false, false, err
 		}
 
-		// If the email is real and Gravatar is enabled, enqueue a fetching operation
-		if realEmail && Services.DynConfigService().GetBool(data.ConfigKeyIntegrationsUseGravatar) {
-			Services.GravatarProcessor().Enqueue(&user.ID, user.Email)
+		// If there's an avatar URL, use it to fetch an avatar image, in the background
+		if avatarURL != "" {
+			Services.WebAvatarProcessor().Enqueue(&WebAvatarRequest{UserID: user.ID, AvatarURL: avatarURL})
+
+			// Otherwise, if the email is real and Gravatar is enabled, enqueue a Gravatar image fetching operation
+		} else if realEmail && Services.DynConfigService().GetBool(data.ConfigKeyIntegrationsUseGravatar) {
+			Services.GravatarProcessor().Enqueue(&GravatarRequest{UserID: user.ID, UserEmail: user.Email})
 		}
 		userAdded = true
 	}

@@ -3,6 +3,7 @@ package svc
 import (
 	"fmt"
 	"github.com/doug-martin/goqu/v9/exp"
+	"github.com/google/uuid"
 	xintf "gitlab.com/comentario/comentario/extend/intf"
 	"gitlab.com/comentario/comentario/internal/config"
 	"gitlab.com/comentario/comentario/internal/intf"
@@ -12,6 +13,19 @@ import (
 
 // Services is a global service serviceManager interface
 var Services ServiceManager = newServiceManager()
+
+// WebAvatarRequest is an avatar request for fetching avatars from the web
+type WebAvatarRequest struct {
+	UserID    uuid.UUID // ID of the user to fetch an avatar for
+	AvatarURL string    // URL of the avatar image
+	IsCustom  bool      // Whether the avatar is customised by the user
+}
+
+// GravatarRequest is an avatar request tailored to the Gravatar service
+type GravatarRequest struct {
+	UserID    uuid.UUID // ID of the user to fetch an avatar for
+	UserEmail string    // User's email
+}
 
 // ServiceManager provides high-level service management routines
 type ServiceManager interface {
@@ -46,8 +60,8 @@ type ServiceManager interface {
 	DomainService(tx *persistence.DatabaseTx) DomainService
 	// DynConfigService returns an instance of DynConfigService
 	DynConfigService() DynConfigService
-	// GravatarProcessor returns an instance of GravatarProcessor
-	GravatarProcessor() GravatarProcessor
+	// GravatarProcessor returns an instance of Gravatar avatar processor
+	GravatarProcessor() AvatarProcessor[*GravatarRequest]
 	// I18nService returns an instance of I18nService
 	I18nService() I18nService
 	// ImportExportService returns an instance of ImportExportService
@@ -74,6 +88,8 @@ type ServiceManager interface {
 	UserAttrService(tx *persistence.DatabaseTx) xintf.AttrStore
 	// VersionService returns an instance of VersionService
 	VersionService() intf.VersionService
+	// WebAvatarProcessor returns an instance of a web avatar processor
+	WebAvatarProcessor() AvatarProcessor[*WebAvatarRequest]
 	// WebSocketsService returns an instance of WebSocketsService
 	WebSocketsService() WebSocketsService
 	// WithTx executes the given function in the context of a newly-created transaction (passed to the function)
@@ -103,27 +119,27 @@ func (d *dbTxAware) dbx() persistence.DBX {
 //----------------------------------------------------------------------------------------------------------------------
 
 type serviceManager struct {
-	inited      bool
-	db          *persistence.Database // Connected database instance
-	gp          GravatarProcessor     // Instance of a GravatarProcessor (lazy-inited)
-	gpMu        sync.Mutex            // Mutex for gp
-	ptf         PageTitleFetcher      // Instance of a PageTitleFetcher (lazy-inited)
-	ptfMu       sync.Mutex            // Mutex for ptf
-	cleanSvc    CleanupService        // Cleanup service singleton
-	domCfgCache *domainConfigCache    // Domain config cache singleton
-	dynCfgSvc   DynConfigService      // Dynamic config service singleton
-	i18nSvc     I18nService           // I18n service singleton
-	mailSvc     MailService           // Mail service singleton
-	perlSvc     PerlustrationService  // Perlustration service singleton
-	plugMgr     PluginManager         // Plugin manager singleton
-	verSvc      intf.VersionService   // Version service singleton
-	wsSvc       WebSocketsService     // WebSockets service singleton
-	domainAttrs *attrStore            // Cached domain attribute store singleton
-	userAttrs   *attrStore            // Cached user attribute store singleton
+	inited        bool
+	db            *persistence.Database              // Connected database instance
+	webAvatarProc AvatarProcessor[*WebAvatarRequest] // Instance of a web avatar processor
+	gravatarProc  AvatarProcessor[*GravatarRequest]  // Instance of a Gravatar processor
+	ptf           PageTitleFetcher                   // Instance of a PageTitleFetcher (lazy-inited)
+	ptfMu         sync.Mutex                         // Mutex for ptf
+	cleanSvc      CleanupService                     // Cleanup service singleton
+	domCfgCache   *domainConfigCache                 // Domain config cache singleton
+	dynCfgSvc     DynConfigService                   // Dynamic config service singleton
+	i18nSvc       I18nService                        // I18n service singleton
+	mailSvc       MailService                        // Mail service singleton
+	perlSvc       PerlustrationService               // Perlustration service singleton
+	plugMgr       PluginManager                      // Plugin manager singleton
+	verSvc        intf.VersionService                // Version service singleton
+	wsSvc         WebSocketsService                  // WebSockets service singleton
+	domainAttrs   *attrStore                         // Cached domain attribute store singleton
+	userAttrs     *attrStore                         // Cached user attribute store singleton
 }
 
 func newServiceManager() *serviceManager {
-	return &serviceManager{
+	sm := &serviceManager{
 		domCfgCache: newDomainConfigCache(),
 		i18nSvc:     newI18nService(),
 		mailSvc:     newMailService(),
@@ -134,15 +150,17 @@ func newServiceManager() *serviceManager {
 		domainAttrs: newAttrStore("cm_domain_attrs", "domain_id", false),
 		userAttrs:   newAttrStore("cm_user_attrs", "user_id", true),
 	}
+	sm.gravatarProc = newAvatarProcessor(func(req *GravatarRequest) error {
+		return sm.AvatarService(nil).SetFromGravatar(&req.UserID, req.UserEmail, false)
+	})
+	sm.webAvatarProc = newAvatarProcessor(func(req *WebAvatarRequest) error {
+		return sm.AvatarService(nil).DownloadAndUpdateByUserID(&req.UserID, req.AvatarURL, req.IsCustom)
+	})
+	return sm
 }
 
-func (m *serviceManager) GravatarProcessor() GravatarProcessor {
-	m.gpMu.Lock()
-	defer m.gpMu.Unlock()
-	if m.gp == nil {
-		m.gp = newGravatarProcessor()
-	}
-	return m.gp
+func (m *serviceManager) GravatarProcessor() AvatarProcessor[*GravatarRequest] {
+	return m.gravatarProc
 }
 
 func (m *serviceManager) AuthService(tx *persistence.DatabaseTx) AuthService {
@@ -345,6 +363,10 @@ func (m *serviceManager) VersionService() intf.VersionService {
 
 func (m *serviceManager) SetVersionService(v intf.VersionService) {
 	m.verSvc = v
+}
+
+func (m *serviceManager) WebAvatarProcessor() AvatarProcessor[*WebAvatarRequest] {
+	return m.webAvatarProc
 }
 
 func (m *serviceManager) WebSocketsService() WebSocketsService {

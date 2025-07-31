@@ -39,9 +39,11 @@ type AvatarService interface {
 	UpdateByUserID(userID *uuid.UUID, r io.Reader, isCustom bool) error
 }
 
-type GravatarProcessor interface {
+// AvatarProcessor is a generic service interface for background avatar fetchers. R is the type of avatar requests
+// handled by the processor
+type AvatarProcessor[R any] interface {
 	// Enqueue adds a request to the queue
-	Enqueue(userID *uuid.UUID, userEmail string)
+	Enqueue(req R)
 }
 
 // avatarService is a blueprint AvatarService implementation
@@ -218,37 +220,33 @@ func (svc *avatarService) readImage(r io.Reader, ua *data.UserAvatar) error {
 
 //----------------------------------------------------------------------------------------------------------------------
 
-// newGravatarProcessor creates a new GravatarProcessor instance
-func newGravatarProcessor() GravatarProcessor {
-	p := &gravatarProcessor{
+// newAvatarProcessor creates a new AvatarProcessor instance
+func newAvatarProcessor[R any](applyFn func(r R) error) AvatarProcessor[R] {
+	ap := &avatarProcessor[R]{
 		incoming: make(chan bool),
+		applyFn:  applyFn,
 	}
-	go p.run()
-	return p
+	go ap.run()
+	return ap
 }
 
-// gravatarProcessor is a background Gravatar processor
-type gravatarProcessor struct {
+// avatarProcessor is a background avatar processor
+type avatarProcessor[R any] struct {
 	mu       sync.Mutex
 	queue    list.List
 	incoming chan bool
+	applyFn  func(req R) error
 }
 
-// gravatarRequest represents user metadata for fetching an avatar from Gravatar
-type gravatarRequest struct {
-	userID    *uuid.UUID
-	userEmail string
-}
-
-func (p *gravatarProcessor) Enqueue(userID *uuid.UUID, userEmail string) {
-	logger.Debugf("gravatarProcessor.Enqueue(%s, %q)", userID, userEmail)
+func (p *avatarProcessor[R]) Enqueue(req R) {
+	logger.Debugf("avatarProcessor[%T].Enqueue(%#[1]v)", req)
 
 	// Enqueue the request
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.queue.PushBack(&gravatarRequest{userID: userID, userEmail: userEmail})
+	p.queue.PushBack(req)
 
-	// Ping the gravatar fetcher, non-blocking
+	// Ping the avatar fetcher, non-blocking
 	select {
 	case p.incoming <- true:
 	default:
@@ -256,14 +254,16 @@ func (p *gravatarProcessor) Enqueue(userID *uuid.UUID, userEmail string) {
 }
 
 // run continuously processes the queue
-func (p *gravatarProcessor) run() {
+func (p *avatarProcessor[R]) run() {
 	// Loop until there are no more requests
 	for {
 		// Fetch the first request
-		var req *gravatarRequest
+		var req R
+		avail := false
 		p.mu.Lock()
 		if el := p.queue.Front(); el != nil {
-			req = p.queue.Remove(el).(*gravatarRequest)
+			req = p.queue.Remove(el).(R)
+			avail = true
 		} else {
 			// The queue is empty, clear the incoming flag, non-blocking
 			select {
@@ -274,9 +274,8 @@ func (p *gravatarProcessor) run() {
 		p.mu.Unlock()
 
 		// If there's anything to process, execute an avatar update
-		if req != nil {
-			// We intentionally run this in a non-transactional context, since it's a background operation
-			_ = Services.AvatarService(nil).SetFromGravatar(req.userID, req.userEmail, false)
+		if avail {
+			_ = p.applyFn(req)
 		} else {
 			// The queue was empty, pause until we get an incoming request
 			<-p.incoming
