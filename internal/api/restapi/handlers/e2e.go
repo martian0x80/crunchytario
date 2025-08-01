@@ -15,6 +15,7 @@ import (
 	"gitlab.com/comentario/comentario/internal/config"
 	"gitlab.com/comentario/comentario/internal/data"
 	"gitlab.com/comentario/comentario/internal/intf"
+	"gitlab.com/comentario/comentario/internal/persistence"
 	"gitlab.com/comentario/comentario/internal/svc"
 	"gitlab.com/comentario/comentario/internal/util"
 	"io"
@@ -250,10 +251,17 @@ func E2eOAuthFederatedLogin(params api_e2e.E2eOAuthFederatedLoginParams) middlew
 	}
 
 	// Verify the user can log in and create a new session
-	us, r := loginUser(u, "", params.HTTPRequest)
-	if r != nil {
+	var us *data.UserSession
+	if r := svc.Services.WithTxResp(func(tx *persistence.DatabaseTx) middleware.Responder {
+		var r middleware.Responder
+		us, r = loginUser(tx, u, "", params.HTTPRequest)
+		return r
+	}); r != nil {
 		return r
 	}
+
+	// Update the user's avatar, if necessary, after the transaction is committed
+	updateUserGravatar(u)
 
 	// Succeeded. Return a principal and a session cookie
 	return authAddUserSessionToResponse(api_e2e.NewE2eOAuthFederatedLoginOK(), u, us)

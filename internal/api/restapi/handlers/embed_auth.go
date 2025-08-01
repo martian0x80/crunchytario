@@ -17,32 +17,39 @@ import (
 
 func EmbedAuthLogin(params api_embed.EmbedAuthLoginParams) middleware.Responder {
 	// Log the user in
-	user, us, r := loginLocalUser(
-		data.EmailPtrToString(params.Body.Email),
-		swag.StringValue(params.Body.Password),
-		string(params.Body.Host),
-		params.HTTPRequest)
-	if r != nil {
-		return r
-	}
-
-	// Fetch the user's attributes
+	var user *data.User
+	var us *data.UserSession
 	var attr intf.AttrValues
 	var du *data.DomainUser
-	err := svc.Services.WithTx(func(tx *persistence.DatabaseTx) error {
+	if r := svc.Services.WithTxResp(func(tx *persistence.DatabaseTx) middleware.Responder {
+		var r middleware.Responder
+		user, us, r = loginLocalUser(
+			tx,
+			data.EmailPtrToString(params.Body.Email),
+			swag.StringValue(params.Body.Password),
+			string(params.Body.Host),
+			params.HTTPRequest)
+		if r != nil {
+			return r
+		}
+
+		// Fetch the user's attributes
 		var err error
-		attr, err = svc.Services.UserAttrService(tx).GetAll(&user.ID)
-		if err != nil {
-			return err
+		if attr, err = svc.Services.UserAttrService(tx).GetAll(&user.ID); err != nil {
+			return respServiceError(err)
 		}
 
 		// Find the domain user, creating one if necessary
-		_, du, err = svc.Services.DomainService(tx).FindDomainUserByHost(string(params.Body.Host), &user.ID, true)
-		return err
-	})
-	if err != nil {
-		return respServiceError(err)
+		if _, du, err = svc.Services.DomainService(tx).FindDomainUserByHost(string(params.Body.Host), &user.ID, true); err != nil {
+			return respServiceError(err)
+		}
+		return nil
+	}); r != nil {
+		return r
 	}
+
+	// Update the user's avatar, if necessary, after the transaction is committed
+	updateUserGravatar(user)
 
 	// Succeeded
 	return api_embed.NewEmbedAuthLoginOK().WithPayload(&api_embed.EmbedAuthLoginOKBody{
@@ -78,28 +85,33 @@ func EmbedAuthLoginTokenNew(params api_embed.EmbedAuthLoginTokenNewParams) middl
 func EmbedAuthLoginTokenRedeem(params api_embed.EmbedAuthLoginTokenRedeemParams, user *data.User) middleware.Responder {
 	// Verify the user can log in and create a new session
 	host := string(params.Body.Host)
-	us, r := loginUser(user, host, params.HTTPRequest)
-	if r != nil {
-		return r
-	}
-
+	var us *data.UserSession
 	var attr intf.AttrValues
 	var du *data.DomainUser
-	err := svc.Services.WithTx(func(tx *persistence.DatabaseTx) error {
+	if r := svc.Services.WithTxResp(func(tx *persistence.DatabaseTx) middleware.Responder {
+		var r middleware.Responder
+		if us, r = loginUser(tx, user, host, params.HTTPRequest); r != nil {
+			return r
+		}
+
 		var err error
 		// Fetch the user's attributes
 		attr, err = svc.Services.UserAttrService(tx).GetAll(&user.ID)
 		if err != nil {
-			return err
+			return respServiceError(err)
 		}
 
 		// Find the domain user, creating one if necessary
-		_, du, err = svc.Services.DomainService(tx).FindDomainUserByHost(host, &user.ID, true)
-		return err
-	})
-	if err != nil {
-		return respServiceError(err)
+		if _, du, err = svc.Services.DomainService(tx).FindDomainUserByHost(host, &user.ID, true); err != nil {
+			return respServiceError(err)
+		}
+		return nil
+	}); r != nil {
+		return r
 	}
+
+	// Update the user's avatar, if necessary, after the transaction is committed
+	updateUserGravatar(user)
 
 	// Succeeded
 	return api_embed.NewEmbedAuthLoginOK().WithPayload(&api_embed.EmbedAuthLoginOKBody{
@@ -160,9 +172,12 @@ func EmbedAuthSignup(params api_embed.EmbedAuthSignupParams) middleware.Responde
 	}
 
 	// Sign-up the new user
-	if r := signupUser(user); r != nil {
+	if r := svc.Services.WithTxResp(func(tx *persistence.DatabaseTx) middleware.Responder { return signupUser(tx, user) }); r != nil {
 		return r
 	}
+
+	// Update the user's avatar, if necessary, after the transaction is committed
+	updateUserGravatar(user)
 
 	// Succeeded
 	return api_embed.NewEmbedAuthSignupOK().WithPayload(&api_embed.EmbedAuthSignupOKBody{IsConfirmed: user.Confirmed})

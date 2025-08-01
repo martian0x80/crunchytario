@@ -356,3 +356,15 @@ func userGetOptional(pid *strfmt.UUID) (*data.User, middleware.Responder) {
 	// Parse the ID and fetch the user otherwise
 	return userGet(*pid)
 }
+
+// updateUserGravatar fetches the user's avatar, as a non-customised one, if Gravatar is enabled, ignoring any error. It
+// tries to do that synchronously to let the user see their avatar right away, but will turn asynchronous after a
+// timeout
+func updateUserGravatar(u *data.User) {
+	if svc.Services.DynConfigService().GetBool(data.ConfigKeyIntegrationsUseGravatar) {
+		// Avatar update is intentionally being run outside of any transaction: firstly, the user record needs to be
+		// committed in any preceding transaction (it may not even exist before that); secondly, it's a background
+		// operation that takes an unknown amount of time, and may eventually fail
+		svc.Services.AvatarService(nil).SetFromGravatarAsync(&u.ID, u.Email, false)
+	}
+}

@@ -1,8 +1,10 @@
 package svc
 
 import (
+	"errors"
 	"fmt"
 	"github.com/doug-martin/goqu/v9/exp"
+	"github.com/go-openapi/runtime/middleware"
 	"github.com/google/uuid"
 	xintf "gitlab.com/comentario/comentario/extend/intf"
 	"gitlab.com/comentario/comentario/internal/config"
@@ -94,6 +96,8 @@ type ServiceManager interface {
 	WebSocketsService() WebSocketsService
 	// WithTx executes the given function in the context of a newly-created transaction (passed to the function)
 	WithTx(func(tx *persistence.DatabaseTx) error) error
+	// WithTxResp is like WithTx, but takes a function that returns a middleware.Responder instead of error
+	WithTxResp(func(tx *persistence.DatabaseTx) middleware.Responder) middleware.Responder
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -375,6 +379,18 @@ func (m *serviceManager) WebSocketsService() WebSocketsService {
 
 func (m *serviceManager) WithTx(f func(tx *persistence.DatabaseTx) error) error {
 	return m.db.WithTx(f)
+}
+
+func (m *serviceManager) WithTxResp(f func(tx *persistence.DatabaseTx) middleware.Responder) middleware.Responder {
+	var r middleware.Responder
+	_ = m.db.WithTx(func(tx *persistence.DatabaseTx) error {
+		// Run f(), converting the presence/absence of the responder into a presence/absence of error
+		if r = f(tx); r != nil {
+			return errors.New("WithTxResp: f failed")
+		}
+		return nil
+	})
+	return r
 }
 
 // postDBInit is called after the DB is initialised to finalise schema initialisation

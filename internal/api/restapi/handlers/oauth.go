@@ -304,22 +304,6 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 			}
 		}
 
-		// If there's an avatar URL and the avatar isn't customised, fetch and update the avatar
-		if fedUser.AvatarURL != "" {
-			// Give the process a while to complete, and proceed if it times out
-			util.GoTimeout(
-				util.AvatarFetchTimeout,
-				// We intentionally run this in a non-transactional context, since it's essentially a background operation
-				func() {
-					_ = svc.Services.AvatarService(nil).DownloadAndUpdateByUserID(&user.ID, fedUser.AvatarURL, false)
-				})
-
-			// Otherwise, try to fetch an image from Gravatar, if enabled
-		} else if svc.Services.DynConfigService().GetBool(data.ConfigKeyIntegrationsUseGravatar) {
-			// We intentionally run this in a non-transactional context, since it's a background operation
-			svc.Services.AvatarService(nil).SetFromGravatarAsync(&user.ID, user.Email, false)
-		}
-
 		// Update the token by binding it to the authenticated user
 		token.Owner = user.ID
 		if err := svc.Services.TokenService(tx).Update(token); err != nil {
@@ -352,7 +336,22 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 		return oauthFailure(nonIntSSO, errMessage, err)
 	}
 
-	// Auth successful. If it's non-interactive SSO
+	// Auth successful. Once the transaction is committed, handle the user's avatar: if there's an avatar URL and the
+	// avatar isn't customised, fetch and update it
+	if fedUser.AvatarURL != "" {
+		// Give the process a while to complete, and proceed if it times out
+		util.GoTimeout(
+			util.AvatarFetchTimeout,
+			func() {
+				_ = svc.Services.AvatarService(nil).DownloadAndUpdateByUserID(&user.ID, fedUser.AvatarURL, false)
+			})
+
+	} else {
+		// Otherwise, try to fetch an image from Gravatar, if enabled
+		updateUserGravatar(user)
+	}
+
+	// If it's non-interactive SSO
 	var resp middleware.Responder
 	if nonIntSSO {
 		// Send a success message to the parent window

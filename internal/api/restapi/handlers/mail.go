@@ -157,7 +157,7 @@ func sendCommentStatusNotifications(domain *data.Domain, page *data.DomainPage, 
 }
 
 // sendConfirmationEmail sends an email containing a confirmation link to the given user
-func sendConfirmationEmail(user *data.User) middleware.Responder {
+func sendConfirmationEmail(tx *persistence.DatabaseTx, user *data.User) middleware.Responder {
 	// Don't bother if the user is already confirmed
 	if user.Confirmed {
 		return nil
@@ -170,7 +170,7 @@ func sendConfirmationEmail(user *data.User) middleware.Responder {
 	}
 
 	// Persist the token
-	if err := svc.Services.TokenService(nil).Create(token); err != nil {
+	if err := svc.Services.TokenService(tx).Create(token); err != nil {
 		return respServiceError(err)
 	}
 
