@@ -55,14 +55,14 @@ func wordpressImport(curUser *data.User, domain *data.Domain, buf []byte) *Impor
 	// Unmarshal the XML data
 	exp := rssXML{}
 	if err := xml.Unmarshal(buf, &exp); err != nil {
-		logger.Errorf("wordpressImport: xml.Unmarshal() failed: %v", err)
+		logger.Errorf("wordpressImport/Unmarshal: %v", err)
 		return importError(err)
 	}
 
 	result := &ImportResult{}
 
 	// Fetch domain config
-	maxLength := TheDomainConfigService.GetInt(&domain.ID, data.DomainConfigKeyMaxCommentLength)
+	maxLength := Services.DomainConfigService(nil).GetInt(&domain.ID, data.DomainConfigKeyMaxCommentLength)
 	logger.Debugf("Max. comment text length is %d", maxLength)
 
 	// Make sure there's at least one channel
@@ -97,7 +97,7 @@ func wordpressImport(curUser *data.User, domain *data.Domain, buf []byte) *Impor
 				pageID = id
 
 				// Page doesn't exist. Find or insert a page with this path
-			} else if page, added, err := ThePageService.UpsertByDomainPath(domain, u.Path, post.Title, nil); err != nil {
+			} else if page, added, err := Services.PageService(nil).UpsertByDomainPath(domain, u.Path, post.Title, nil); err != nil {
 				return result.WithError(err)
 
 			} else {
@@ -173,7 +173,7 @@ func wordpressImport(curUser *data.User, domain *data.Domain, buf []byte) *Impor
 				}
 
 				// Update the comment's markdown and render it into HTML. Truncate comment text to avoid errors
-				if err := TheCommentService.SetMarkdown(c, util.TruncateStr(comment.Content, maxLength), &domain.ID, nil); err != nil {
+				if err := Services.CommentService(nil).SetMarkdown(c, util.TruncateStr(comment.Content, maxLength), &domain.ID, nil); err != nil {
 					return result.WithError(err)
 				}
 
@@ -193,12 +193,12 @@ func wordpressImport(curUser *data.User, domain *data.Domain, buf []byte) *Impor
 	result.CommentsImported, result.CommentsNonDeleted, result.Error = insertCommentsForParent(util.ZeroUUID, commentParentIDMap, countsPerPage)
 
 	// Increase comment count on the domain, ignoring errors
-	_ = TheDomainService.IncrementCounts(&domain.ID, result.CommentsNonDeleted, 0)
+	_ = Services.DomainService(nil).IncrementCounts(&domain.ID, result.CommentsNonDeleted, 0)
 
 	// Increase comment counts on all pages
 	for pageID, pc := range countsPerPage {
 		if pc > 0 {
-			_ = ThePageService.IncrementCounts(&pageID, pc, 0)
+			_ = Services.PageService(nil).IncrementCounts(&pageID, pc, 0)
 		}
 	}
 

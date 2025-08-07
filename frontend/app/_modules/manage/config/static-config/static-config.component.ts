@@ -10,6 +10,7 @@ import { DatetimePipe } from '../../_pipes/datetime.pipe';
 import { InfoIconComponent } from '../../../tools/info-icon/info-icon.component';
 import { IdentityProviderIconComponent } from '../../../tools/identity-provider-icon/identity-provider-icon.component';
 import { CheckmarkComponent } from '../../../tools/checkmark/checkmark.component';
+import { DecimalPipe } from '@angular/common';
 
 @UntilDestroy()
 @Component({
@@ -23,6 +24,7 @@ import { CheckmarkComponent } from '../../../tools/checkmark/checkmark.component
         InfoIconComponent,
         IdentityProviderIconComponent,
         CheckmarkComponent,
+        DecimalPipe,
     ],
 })
 export class StaticConfigComponent implements OnInit {

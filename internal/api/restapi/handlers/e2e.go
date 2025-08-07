@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/op/go-logging"
-	complugin "gitlab.com/comentario/comentario/extend/plugin"
 	"gitlab.com/comentario/comentario/internal/api/exmodels"
 	"gitlab.com/comentario/comentario/internal/api/models"
 	"gitlab.com/comentario/comentario/internal/api/restapi/operations"
@@ -37,7 +36,7 @@ func (a *e2eApp) SetMailer(mailer intf.Mailer) {
 }
 
 func (a *e2eApp) SetVersionService(s intf.VersionService) {
-	svc.TheVersionService = s
+	svc.Services.SetVersionService(s)
 }
 
 func (a *e2eApp) LogError(fmt string, args ...any) {
@@ -53,7 +52,7 @@ func (a *e2eApp) LogWarning(fmt string, args ...any) {
 }
 
 func (a *e2eApp) RecreateDBSchema(seedSQL string) error {
-	return svc.TheServiceManager.E2eRecreateDBSchema(seedSQL)
+	return svc.Services.E2eRecreateDBSchema(seedSQL)
 }
 
 func (a *e2eApp) XSRFSafePaths() intf.PathRegistry {
@@ -117,7 +116,7 @@ func E2eInit() error {
 
 func E2eConfigDynamicUpdate(params api_e2e.E2eConfigDynamicUpdateParams) middleware.Responder {
 	// Update the config
-	if err := svc.TheDynConfigService.Update(nil, data.DynConfigDTOsToMap(params.Body)); err != nil {
+	if err := svc.Services.DynConfigService().Update(nil, data.DynConfigDTOsToMap(params.Body)); err != nil {
 		return respServiceError(err)
 	}
 
@@ -159,7 +158,7 @@ func E2eDomainPatch(params api_e2e.E2eDomainPatchParams) middleware.Responder {
 
 	// Save the changes back into the DB
 	domain.FromDTO(dto)
-	if err := svc.TheDomainService.Update(domain); err != nil {
+	if err := svc.Services.DomainService(nil).Update(domain); err != nil {
 		return respServiceError(err)
 	}
 
@@ -175,7 +174,7 @@ func E2eDomainConfigUpdate(params api_e2e.E2eDomainConfigUpdateParams) middlewar
 	}
 
 	// Update the domain setting
-	if err := svc.TheDomainConfigService.Update(domainID, nil, data.DynConfigDTOsToMap(params.Body)); err != nil {
+	if err := svc.Services.DomainConfigService(nil).Update(domainID, nil, data.DynConfigDTOsToMap(params.Body)); err != nil {
 		return respServiceError(err)
 	}
 
@@ -191,7 +190,7 @@ func E2eDomainUpdateAttrs(params api_e2e.E2eDomainUpdateAttrsParams) middleware.
 	}
 
 	// Update the attributes
-	if err := svc.TheDomainAttrService.Set(domainID, complugin.AttrValues(*params.Body.Values)); err != nil {
+	if err := svc.Services.DomainAttrService(nil).Set(domainID, *params.Body.Values); err != nil {
 		return respServiceError(err)
 	}
 
@@ -207,7 +206,7 @@ func E2eDomainUpdateIdps(params api_e2e.E2eDomainUpdateIdpsParams) middleware.Re
 	}
 
 	// Update the list of IdPs
-	if err := svc.TheDomainService.SaveIdPs(domainID, params.Body); err != nil {
+	if err := svc.Services.DomainService(nil).SaveIdPs(domainID, params.Body); err != nil {
 		return respServiceError(err)
 	}
 
@@ -337,7 +336,7 @@ func E2eUserUpdateAttrs(params api_e2e.E2eUserUpdateAttrsParams) middleware.Resp
 	}
 
 	// Update the attributes
-	if err := svc.TheUserAttrService.Set(userID, complugin.AttrValues(*params.Body.Values)); err != nil {
+	if err := svc.Services.UserAttrService(nil).Set(userID, *params.Body.Values); err != nil {
 		return respServiceError(err)
 	}
 

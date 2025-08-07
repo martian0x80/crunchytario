@@ -1,4 +1,4 @@
-import { DOMAINS, PATHS, TEST_PATHS, USERS } from '../../../../../support/cy-utils';
+import { DOMAIN_PAGES, DOMAINS, PATHS, TEST_PATHS, USERS } from '../../../../../support/cy-utils';
 
 context('Domain Page Manager', () => {
 
@@ -25,8 +25,8 @@ context('Domain Page Manager', () => {
     ];
     const pagesByPath        = pages.slice().sort((a, b) => a.path.localeCompare(b.path))  .map(p => p.path);
     const pagesByTitle       = pages.slice().sort((a, b) => a.title.localeCompare(b.title)).map(p => p.title).filter(s => s);
-    const pagesByCntComments = pages.slice().sort((a, b) => a.cntComments - b.cntComments) .map(p => `${p.cntComments}\ncomments`);
-    const pagesByCntViews    = pages.slice().sort((a, b) => a.cntViews - b.cntViews)       .map(p => `${p.cntViews}\nviews`);
+    const pagesByCntComments = pages.slice().sort((a, b) => a.cntComments - b.cntComments) .map(p => p.cntComments === 1 ? '1\ncomment' : `${p.cntComments}\ncomments`);
+    const pagesByCntViews    = pages.slice().sort((a, b) => a.cntViews - b.cntViews)       .map(p => p.cntViews    === 1 ? '1\nview'    : `${p.cntViews}\nviews`);
 
     const makeAliases = (hasItems: boolean) => {
         cy.get('app-domain-page-manager').as('pageManager');
@@ -85,37 +85,53 @@ context('Domain Page Manager', () => {
                 .should('arrayMatch', pages.slice().sort((a, b) => a.path.localeCompare(b.path)).map(p => `http://${DOMAINS.localhost.host}${p.path}`));
 
             // Sort by Path DESC
-            cy.get('@pageManager').changeListSort('Path', 'desc');
+            cy.get('@pageManager').changeListSort('Path', 'asc', 'Path', 'desc');
             cy.get('@pageList').texts('.domain-page-path').should('arrayMatch', pagesByPath.slice().reverse());
 
             // Sort by Title
-            cy.get('@pageManager').changeListSort('Title', 'asc');
+            cy.get('@pageManager').changeListSort('Path', 'desc', 'Title', 'asc');
             cy.get('@pageList').texts('.domain-page-title').should('arrayMatch', pagesByTitle);
-            cy.get('@pageManager').changeListSort('Title', 'desc');
+            cy.get('@pageManager').changeListSort('Title', 'asc', 'Title', 'desc');
             cy.get('@pageList').texts('.domain-page-title').should('arrayMatch', pagesByTitle.slice().reverse());
 
             // Sort by Created
-            cy.get('@pageManager').changeListSort('Created', 'asc');
+            cy.get('@pageManager').changeListSort('Title', 'desc', 'Created', 'asc');
             cy.get('@pageList').texts('.domain-page-path').should('arrayMatch', pages.map(p => p.path));
-            cy.get('@pageManager').changeListSort('Created', 'desc');
+            cy.get('@pageManager').changeListSort('Created', 'asc', 'Created', 'desc');
             cy.get('@pageList').texts('.domain-page-path').should('arrayMatch', pages.slice().reverse().map(p => p.path));
 
             // Sort by Number of comments
-            cy.get('@pageManager').changeListSort('Number of comments', 'asc');
+            cy.get('@pageManager').changeListSort('Created', 'desc', 'Number of comments', 'asc');
             cy.get('@pageList').texts('.domain-page-cnt-comments').should('arrayMatch', pagesByCntComments);
-            cy.get('@pageManager').changeListSort('Number of comments', 'desc');
+            cy.get('@pageManager').changeListSort('Number of comments', 'asc', 'Number of comments', 'desc');
             cy.get('@pageList').texts('.domain-page-cnt-comments').should('arrayMatch', pagesByCntComments.slice().reverse());
 
             // Sort by Number of views
-            cy.get('@pageManager').changeListSort('Number of views', 'asc');
+            cy.get('@pageManager').changeListSort('Number of comments', 'desc', 'Number of views', 'asc');
             cy.get('@pageList').texts('.domain-page-cnt-views').should('arrayMatch', pagesByCntViews);
-            cy.get('@pageManager').changeListSort('Number of views', 'desc');
+            cy.get('@pageManager').changeListSort('Number of views', 'asc', 'Number of views', 'desc');
             cy.get('@pageList').texts('.domain-page-cnt-views').should('arrayMatch', pagesByCntViews.slice().reverse());
 
             // Sort by Path ASC again
-            cy.get('@pageManager').changeListSort('Path', 'asc');
+            cy.get('@pageManager').changeListSort('Number of views', 'desc', 'Path', 'asc');
             cy.get('@pageList').texts('.domain-page-path').should('arrayMatch', pagesByPath);
         });
+
+        it('retains chosen sort order', () =>
+            cy.checkListSortRetained(
+                '@pageManager',
+                [
+                    {sort: 'Path',               order: 'asc'},
+                    {sort: 'Path',               order: 'desc'},
+                    {sort: 'Title',              order: 'asc'},
+                    {sort: 'Title',              order: 'desc'},
+                    {sort: 'Created',            order: 'asc'},
+                    {sort: 'Created',            order: 'desc'},
+                    {sort: 'Number of comments', order: 'asc'},
+                    {sort: 'Number of comments', order: 'desc'},
+                    {sort: 'Number of views',    order: 'asc'},
+                    {sort: 'Number of views',    order: 'desc'},
+                ]));
 
         it('filters pages', () => {
 
@@ -148,7 +164,7 @@ context('Domain Page Manager', () => {
 
         it('allows to navigate to page props', () => {
             cy.get('@pageList').find('a.list-group-item').eq(1).click();
-            cy.isAt(pagePath + '/0ebb8a1b-12f6-421e-b1bb-75867ac4a000');
+            cy.isAt(`${pagePath}/${DOMAIN_PAGES.attrAutoInit.id}`);
         });
 
         it('updates view stats', () => {
@@ -159,7 +175,7 @@ context('Domain Page Manager', () => {
             // Go back to the list and check the counts
             cy.visit(pagePath);
             cy.get('@pageList').contains('a.list-group-item', TEST_PATHS.comments)
-                .find('.domain-page-cnt-views').should('have.text', '1' + 'views');
+                .find('.domain-page-cnt-views').should('have.text', '1' + 'view');
         });
     });
 

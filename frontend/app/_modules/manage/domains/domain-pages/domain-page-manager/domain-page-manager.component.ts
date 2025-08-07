@@ -19,6 +19,8 @@ import { SortSelectorComponent } from '../../../sort-selector/sort-selector.comp
 import { SortPropertyComponent } from '../../../sort-selector/sort-property/sort-property.component';
 import { ListFooterComponent } from '../../../../tools/list-footer/list-footer.component';
 import { LoaderDirective } from '../../../../tools/_directives/loader.directive';
+import { LocalSettingService } from '../../../../../_services/local-setting.service';
+import { SortableViewSettings } from '../../../_models/view';
 
 @UntilDestroy()
 @Component({
@@ -52,7 +54,7 @@ export class DomainPageManagerComponent implements OnInit {
     /** Observable triggering a data load, while indicating whether a result reset is needed. */
     readonly load = new Subject<boolean>();
 
-    readonly sort = new Sort('path');
+    readonly sort = new Sort(['path', 'title', 'created', 'countComments', 'countViews'], 'path', false);
     readonly pagesLoading = new ProcessingStatus();
 
     readonly filterForm = this.fb.nonNullable.group({
@@ -69,7 +71,11 @@ export class DomainPageManagerComponent implements OnInit {
         private readonly api: ApiGeneralService,
         private readonly domainSelectorSvc: DomainSelectorService,
         private readonly configSvc: ConfigService,
-    ) {}
+        private readonly localSettingSvc: LocalSettingService,
+    ) {
+        // Restore the view settings
+        localSettingSvc.load<SortableViewSettings>('domainPageManager').subscribe(s => s?.sort && (this.sort.asString = s.sort));
+    }
 
     ngOnInit(): void {
         merge(
@@ -79,7 +85,7 @@ export class DomainPageManagerComponent implements OnInit {
                         untilDestroyed(this),
                         tap(meta => this.domainMeta = meta)),
                 // Subscribe to sort changes
-                this.sort.changes.pipe(untilDestroyed(this)),
+                this.sort.changes,
                 // Subscribe to filter changes
                 this.filterForm.valueChanges.pipe(untilDestroyed(this), debounceTime(500), distinctUntilChanged()))
             .pipe(
@@ -108,6 +114,9 @@ export class DomainPageManagerComponent implements OnInit {
             .subscribe(r => {
                 this.pages = [...this.pages || [], ...r.pages || []];
                 this.canLoadMore = this.configSvc.canLoadMore(r.pages);
+
+                // Persist view settings
+                this.localSettingSvc.storeValue<SortableViewSettings>('domainPageManager', {sort: this.sort.asString});
             });
     }
 }

@@ -20,15 +20,6 @@ const (
 	wsMaxMessageSize = 2999                  // Maximum allowed incoming/outgoing message size. Must accommodate a complete wsMsgPayload
 )
 
-// TheWebSocketsService is a global WebSocketsService implementation
-var TheWebSocketsService WebSocketsService = &webSocketsService{
-	clients:    make(map[*wsClient]bool),
-	send:       make(chan *wsMsgPayload),
-	register:   make(chan *wsClient),
-	unregister: make(chan *wsClient),
-	quit:       make(chan bool),
-}
-
 // WebSocketsService is a service interface for managing WebSocket subscriptions
 type WebSocketsService interface {
 	// Active returns whether the service is running
@@ -67,6 +58,17 @@ type webSocketsService struct {
 	quit       chan bool          // Channel for shutting down the service
 }
 
+// newWebSocketsService creates an instance of webSocketsService
+func newWebSocketsService() *webSocketsService {
+	return &webSocketsService{
+		clients:    make(map[*wsClient]bool),
+		send:       make(chan *wsMsgPayload),
+		register:   make(chan *wsClient),
+		unregister: make(chan *wsClient),
+		quit:       make(chan bool),
+	}
+}
+
 func (svc *webSocketsService) Active() bool {
 	return svc.active
 }
@@ -76,11 +78,13 @@ func (svc *webSocketsService) Add(w http.ResponseWriter, r *http.Request) error 
 
 	// Make sure the service is running
 	if !svc.active {
+		svc.error(w, http.StatusForbidden)
 		return errors.New("cannot Add: service isn't active")
 	}
 
 	// Make sure the maximum number of clients hasn't been exceeded
 	if svc.numClients.Load() >= int32(config.ServerConfig.WSMaxClients) {
+		svc.error(w, http.StatusTooManyRequests)
 		return fmt.Errorf("cannot Add: maximum number of clients (%d) is reached", config.ServerConfig.WSMaxClients)
 	}
 
@@ -94,7 +98,8 @@ func (svc *webSocketsService) Add(w http.ResponseWriter, r *http.Request) error 
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		return fmt.Errorf("upgrade failed: %v", err)
+		// No need to write out an error header here as it's done by the upgrader
+		return fmt.Errorf("upgrade failed: %w", err)
 	}
 
 	// Increment the number of clients BEFORE sending the new client over the channel (because its handling may not
@@ -153,6 +158,13 @@ func (svc *webSocketsService) Shutdown() {
 func (svc *webSocketsService) addClient(c *wsClient) {
 	logger.Debug("webSocketsService.addClient()") // Makes no sense to log client data as it's still pristine and hence indistinguishable
 	svc.clients[c] = true
+}
+
+// error writes an error header using the provided response
+// NB: even though the response gets properly written out, the status isn't readable on the client-side socket due to
+// security considerations
+func (svc *webSocketsService) error(w http.ResponseWriter, code int) {
+	http.Error(w, http.StatusText(code), code)
 }
 
 // removeClient removes a registered client
@@ -228,7 +240,7 @@ func (c *wsClient) handleIncoming(data []byte) {
 	// Try to unmarshal the JSON payload. Ignore the message if this fails
 	var msg wsMsgPayload
 	if err := json.Unmarshal(data, &msg); err != nil {
-		logger.Errorf("webSocketsService.handleIncoming: Unmarshal() failed: %v", err)
+		logger.Errorf("wsClient.handleIncoming/Unmarshal: %v", err)
 		return
 	}
 
@@ -252,7 +264,7 @@ func (c *wsClient) handleOutgoing(msg *wsMsgPayload) error {
 	// Marshal the message into a JSON string
 	b, err := json.Marshal(msg)
 	if err != nil {
-		logger.Errorf("wsClient.handleOutgoing: Marshal() failed: %v", err)
+		logger.Errorf("wsClient.handleOutgoing/Marshal: %v", err)
 		return err
 	}
 
@@ -336,7 +348,7 @@ func (c *wsClient) writeMessages() {
 
 			// Send the message
 			if err := c.handleOutgoing(msg); err != nil {
-				logger.Warningf("wsClient.writeMessages: handleOutgoing() failed: %v", err)
+				logger.Warningf("wsClient.writeMessages/handleOutgoing: %v", err)
 				return
 			}
 

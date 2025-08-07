@@ -26,7 +26,7 @@ func RssComments(params api_rss.RssCommentsParams) middleware.Responder {
 	feedURL := domain.RootURL()
 
 	// Verify RSS is enabled for this domain
-	if !svc.TheDomainConfigService.GetBool(&domain.ID, data.DomainConfigKeyRSSEnabled) {
+	if !svc.Services.DomainConfigService(nil).GetBool(&domain.ID, data.DomainConfigKeyRSSEnabled) {
 		return respForbidden(exmodels.ErrorFeatureDisabled.WithDetails("RSS"))
 	}
 
@@ -42,7 +42,7 @@ func RssComments(params api_rss.RssCommentsParams) middleware.Responder {
 		title = append(title, "comments")
 	} else {
 		var err error
-		if page, err = svc.ThePageService.FindByID(pageID); err != nil {
+		if page, err = svc.Services.PageService(nil).FindByID(pageID); err != nil {
 			return respServiceError(err)
 		}
 		feedURL += page.Path
@@ -75,7 +75,7 @@ func RssComments(params api_rss.RssCommentsParams) middleware.Responder {
 	title = append(title, "on", domain.Host)
 
 	// Fetch the comments
-	comments, commenterMap, err := svc.TheCommentService.ListWithCommenters(
+	comments, commenterMap, err := svc.Services.CommentService(nil).ListWithCommenters(
 		data.AnonymousUser, nil, &domain.ID, pageID, authorUserID, replyToUserID, true, false, false, false, false, "",
 		"created", data.SortDesc, 0)
 	if err != nil {

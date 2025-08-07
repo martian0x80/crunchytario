@@ -58,7 +58,6 @@
                         "styles": [
                             "./scss/styles.scss"
                         ],
-                        "scripts": [],
                         "localize": true,
                         "browser": "./main.ts",
                         "stylePreprocessorOptions": {

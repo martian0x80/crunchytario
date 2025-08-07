@@ -176,6 +176,15 @@ declare namespace Cypress {
         isInvalid(text?: string): Chainable<JQueryWithSelector>;
 
         /**
+         * Select the specified item in the typeahead window associated with the subject element.
+         * @param text text to use when searching for the option button
+         * @param setAsValue whether to set the passed text as the input's value before searching
+         * @param expectNumItems expected number of items in the typeahead, used to wait for any filtering to complete, defaults to 1
+         * @returns The typeahead element
+         */
+        typeaheadSelect(text: string, setAsValue?: boolean, expectNumItems?: number): Chainable<JQueryWithSelector>;
+
+        /**
          * Login as provided user via the UI.
          * @param creds Credentials to login with
          * @param options Additional login options.
@@ -264,11 +273,29 @@ declare namespace Cypress {
         dlgCancel(): Chainable<JQueryWithSelector>;
 
         /**
-         * Click a sort dropdown and then a sort button with the given label.
+         * Check the currently active sorting in the sort dropdown.
+         * @param sort Expected current sort label.
+         * @param order Expected current sort order.
+         * @return The sort dropdown button.
+         */
+        checkListSort(sort: string, order: 'asc' | 'desc'): Chainable<JQueryWithSelector>;
+
+        /**
+         * Check the currently active sorting in the sort dropdown, then click the dropdown button and subsequently a
+         * sort button with the given label.
+         * @param curSort Current sort label.
+         * @param curOrder The expected current sort order.
          * @param label Sort button label to click.
          * @param expectOrder The expected sort order after the click.
          */
-        changeListSort(label: string, expectOrder: 'asc' | 'desc'): Chainable<void>;
+        changeListSort(curSort: string, curOrder: 'asc' | 'desc', label: string, expectOrder: 'asc' | 'desc'): Chainable<void>;
+
+        /**
+         * Run through the given sequence of sort changes, verifying the sort order is retained after reload.
+         * @param selector String selector for searching the element (we cannot pass the element itself because this command executes page reloads).
+         * @param sequence Sorting steps to follow.
+         */
+        checkListSortRetained(selector: string, sequence: {sort: string; order: 'asc' | 'desc'}[]): Chainable<void>;
 
         /**
          * Verify that when visiting the given path, the application first redirects to the login page and subsequently

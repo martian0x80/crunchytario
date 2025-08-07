@@ -16,6 +16,7 @@ import (
 	"gitlab.com/comentario/comentario/internal/api/restapi/operations/api_general"
 	"gitlab.com/comentario/comentario/internal/config"
 	"gitlab.com/comentario/comentario/internal/data"
+	"gitlab.com/comentario/comentario/internal/persistence"
 	"gitlab.com/comentario/comentario/internal/svc"
 	"gitlab.com/comentario/comentario/internal/util"
 	"net/http"
@@ -44,11 +45,11 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 			return r
 		}
 	}
+	sso := provider == nil
 
 	// Obtain the auth session ID from the cookie
 	var authSession *data.AuthSession
 	if cookie, err := params.HTTPRequest.Cookie(util.CookieNameAuthSession); err != nil {
-		logger.Debugf("Auth session cookie error: %v", err)
 		return oauthFailure(false, "auth session cookie missing", err)
 
 		// Parse the session ID
@@ -56,7 +57,7 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 		return oauthFailure(false, "invalid auth session ID", err)
 
 		// Find and delete the session
-	} else if authSession, err = svc.TheAuthSessionService.TakeByID(&authSessID); errors.Is(err, svc.ErrNotFound) {
+	} else if authSession, err = svc.Services.AuthSessionService(nil).TakeByID(&authSessID); errors.Is(err, svc.ErrNotFound) {
 		return oauthFailure(false, "auth session not found", fmt.Errorf("no auth session found with ID=%v: %w", authSessID, err))
 
 	} else if err != nil {
@@ -65,7 +66,7 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 	}
 
 	// Obtain the token
-	token, err := svc.TheTokenService.FindByValue(authSession.TokenValue, false)
+	token, err := svc.Services.TokenService(nil).FindByValue(authSession.TokenValue, false)
 	if err != nil {
 		return oauthFailureInternal(false, err)
 
@@ -77,12 +78,12 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 	// If it's a commenter login/signup, find the domain the user is authenticating on
 	var domain *data.Domain
 	if authSession.Host != "" {
-		domain, err = svc.TheDomainService.FindByHost(authSession.Host)
+		domain, err = svc.Services.DomainService(nil).FindByHost(authSession.Host)
 		if err != nil {
 			return oauthFailureInternal(false, err)
 		}
 
-	} else if provider == nil {
+	} else if sso {
 		// Host is mandatory for SSO
 		return oauthFailure(false, "host is missing in request", nil)
 	}
@@ -94,7 +95,7 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 
 	// SSO auth
 	nonIntSSO := false
-	if provider == nil {
+	if sso {
 		// Validate domain SSO config
 		if r := Verifier.DomainSSOConfig(domain); r != nil {
 			return r
@@ -193,11 +194,11 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 	}
 
 	// Try to find an existing user by their federated ID
-	user, err := svc.TheUserService.FindUserByFederatedID(idpID, fedUser.UserID)
+	user, err := svc.Services.UserService(nil).FindUserByFederatedID(idpID, fedUser.UserID)
 	if errors.Is(err, svc.ErrNotFound) {
 		// If the ID wasn't found, also try to look the user up by email, because historically federated/SSO users were
 		// created without an ID; the same also applies to imported users
-		if user, err = svc.TheUserService.FindUserByEmail(fedUser.Email); errors.Is(err, svc.ErrNotFound) {
+		if user, err = svc.Services.UserService(nil).FindUserByEmail(fedUser.Email); errors.Is(err, svc.ErrNotFound) {
 			// No such user
 			user = nil
 			err = nil
@@ -209,120 +210,146 @@ func AuthOauthCallback(params api_general.AuthOauthCallbackParams) middleware.Re
 		return oauthFailureInternal(nonIntSSO, err)
 	}
 
-	// If no such user, it's a signup
-	if user == nil {
-		var cfgItem *data.DynConfigItem
-		if domain == nil {
-			// Frontend signup
-			cfgItem, err = svc.TheDynConfigService.Get(data.ConfigKeyAuthSignupEnabled)
+	// Wrap the stuff in a transaction
+	var errMessage string
+	err = svc.Services.WithTx(func(tx *persistence.DatabaseTx) error {
 
-		} else if provider != nil {
-			// Federated embed signup
-			cfgItem, err = svc.TheDomainConfigService.Get(&domain.ID, data.DomainConfigKeyFederatedSignupEnabled)
+		// If no such user, it's a signup
+		if user == nil {
+			var cfgItem *data.DynConfigItem
+			if domain == nil {
+				// Frontend signup
+				cfgItem, err = svc.Services.DynConfigService().Get(data.ConfigKeyAuthSignupEnabled)
+
+			} else if sso {
+				// SSO embed signup
+				cfgItem, err = svc.Services.DomainConfigService(nil).Get(&domain.ID, data.DomainConfigKeySsoSignupEnabled)
+
+			} else {
+				// Federated embed signup
+				cfgItem, err = svc.Services.DomainConfigService(nil).Get(&domain.ID, data.DomainConfigKeyFederatedSignupEnabled)
+			}
+
+			// Check for setting fetching error
+			if err != nil {
+				return err
+			}
+
+			// Check if the setting enables signup
+			if !cfgItem.AsBool() {
+				errMessage = exmodels.ErrorSignupsForbidden.Message
+				return errors.New(errMessage)
+			}
+
+			// Make sure the email isn't in use yet
+			if errm, _ := Verifier.UserCanSignupWithEmail(fedUser.Email); errm != nil {
+				errMessage = errm.String()
+				return errors.New(errMessage)
+			}
+
+			// Insert a new user
+			user = data.NewUser(fedUser.Email, fedUserName).
+				WithConfirmed(true). // Confirm the user right away as we trust the IdP
+				WithLangFromReq(params.HTTPRequest).
+				WithSignup(params.HTTPRequest, authSession.Host, !config.ServerConfig.LogFullIPs).
+				WithFederated(fedUser.UserID, idpID).
+				WithWebsiteURL(userWebsiteURL)
+			if err := svc.Services.UserService(tx).Create(user); err != nil {
+				return err
+			}
+
+			// User is found. If a local account exists
+		} else if user.IsLocal() {
+			errMessage = exmodels.ErrorLoginLocally.Message
+			return errors.New(errMessage)
+
+			// Existing account is a federated one. If user is authenticating via SSO, it must stay that way
+		} else if user.FederatedSSO && !sso {
+			errMessage = exmodels.ErrorLoginUsingSSO.Message
+			return errors.New(errMessage)
+
+			// Make sure the user isn't trying to use SSO while having a non-SSO account, or to change their IdP
+		} else if !user.FederatedSSO && (sso || user.FederatedIdP.String != idpID) {
+			errMessage = exmodels.ErrorLoginUsingIdP.WithDetails(user.FederatedIdP.String).String()
+			return errors.New(errMessage)
+
+			// If the federated ID is available, it must match the one coming from the provider; otherwise it means the
+			// email belongs to a different user
+		} else if user.FederatedID != "" && user.FederatedID != fedUser.UserID {
+			errMessage = exmodels.ErrorEmailAlreadyExists.Message
+			return fmt.Errorf("federated ID from IdP (%q) didn't match one user has (%q)", fedUser.UserID, user.FederatedID)
+
+			// Verify they're allowed to log in
+		} else if errm := svc.Services.AuthService(tx).UserCanAuthenticate(user, true); errm != nil {
+			errMessage = errm.String()
+			return errm.Error()
 
 		} else {
-			// SSO embed signup
-			cfgItem, err = svc.TheDomainConfigService.Get(&domain.ID, data.DomainConfigKeySsoSignupEnabled)
-		}
-
-		// Check for setting fetching error
-		if err != nil {
-			return oauthFailureInternal(nonIntSSO, err)
-		}
-
-		// Check if the setting enables signup
-		if !cfgItem.AsBool() {
-			return oauthFailure(nonIntSSO, exmodels.ErrorSignupsForbidden.Message, nil)
-		}
-
-		// Make sure the email isn't in use yet
-		if errm, _ := Verifier.UserCanSignupWithEmail(fedUser.Email); errm != nil {
-			return oauthFailure(nonIntSSO, errm.String(), nil)
-		}
-
-		// Insert a new user
-		user = data.NewUser(fedUser.Email, fedUserName).
-			WithConfirmed(true). // Confirm the user right away as we trust the IdP
-			WithLangFromReq(params.HTTPRequest).
-			WithSignup(params.HTTPRequest, authSession.Host, !config.ServerConfig.LogFullIPs).
-			WithFederated(fedUser.UserID, idpID).
-			WithWebsiteURL(userWebsiteURL)
-		if err := svc.TheUserService.Create(user); err != nil {
-			return oauthFailureInternal(nonIntSSO, err)
-		}
-
-		// User is found. If a local account exists
-	} else if user.IsLocal() {
-		return oauthFailure(nonIntSSO, exmodels.ErrorLoginLocally.Message, nil)
-
-		// Existing account is a federated one. Make sure the user isn't changing their IdP
-	} else if provider != nil && user.FederatedIdP.String != idpID {
-		return oauthFailure(nonIntSSO, exmodels.ErrorLoginUsingIdP.WithDetails(user.FederatedIdP.String).String(), nil)
-
-		// If user is authenticating via SSO, it must stay that way
-	} else if provider == nil && !user.FederatedSSO {
-		return oauthFailure(nonIntSSO, exmodels.ErrorLoginUsingSSO.Message, nil)
-
-		// If the federated ID is available, it must match the one coming from the provider; otherwise it means the
-		// email belongs to a different user
-	} else if user.FederatedID != "" && user.FederatedID != fedUser.UserID {
-		return oauthFailure(
-			nonIntSSO,
-			exmodels.ErrorEmailAlreadyExists.Message,
-			fmt.Errorf("federated ID from IdP (%q) didn't match one user has (%q)", fedUser.UserID, user.FederatedID))
-
-		// Verify they're allowed to log in
-	} else if errm := svc.TheAuthService.UserCanAuthenticate(user, true); errm != nil {
-		return respUnauthorized(errm)
-
-	} else {
-		// If the user's email is changing, make sure no such email exists
-		if user.Email != fedUser.Email {
-			if _, err := svc.TheUserService.FindUserByEmail(fedUser.Email); !errors.Is(err, svc.ErrNotFound) {
-				return oauthFailure(nonIntSSO, exmodels.ErrorEmailAlreadyExists.Message, nil)
+			// If the user's email is changing, make sure no such email exists
+			if user.Email != fedUser.Email {
+				if _, err := svc.Services.UserService(tx).FindUserByEmail(fedUser.Email); !errors.Is(err, svc.ErrNotFound) {
+					errMessage = exmodels.ErrorEmailAlreadyExists.Message
+					return errors.New(errMessage)
+				}
+				user.WithEmail(fedUser.Email)
 			}
-			user.WithEmail(fedUser.Email)
-		}
 
-		// Update user details
-		user.
-			WithName(fedUserName).
-			WithFederated(fedUser.UserID, idpID).
-			WithWebsiteURL(userWebsiteURL)
-		if err := svc.TheUserService.Update(user); err != nil {
-			return oauthFailureInternal(nonIntSSO, err)
-		}
-	}
-
-	// If there's an avatar URL and the avatar isn't customised, fetch and update the avatar
-	if fedUser.AvatarURL != "" {
-		// Give the process a while to complete, and proceed if it times out
-		util.GoTimeout(util.AvatarFetchTimeout, func() { _ = svc.TheAvatarService.DownloadAndUpdateByUserID(&user.ID, fedUser.AvatarURL, false) })
-
-		// Otherwise, try to fetch an image from Gravatar, if enabled
-	} else if svc.TheDynConfigService.GetBool(data.ConfigKeyIntegrationsUseGravatar) {
-		svc.TheAvatarService.SetFromGravatarAsync(&user.ID, user.Email, false)
-	}
-
-	// Update the token by binding it to the authenticated user
-	token.Owner = user.ID
-	if err := svc.TheTokenService.Update(token); err != nil {
-		return oauthFailureInternal(nonIntSSO, err)
-	}
-
-	// If there's a domain, make sure a domain user exists for this user
-	if domain != nil {
-		_, du, err := svc.TheDomainService.FindDomainUserByID(&domain.ID, &user.ID, true)
-		if err != nil {
-			return oauthFailureInternal(nonIntSSO, err)
-		}
-
-		// If a role was returned by the (SSO) provider and it's changing, update the domain user
-		if userRole != "" && userRole != du.Role() {
-			if err := svc.TheDomainService.UserModify(du.WithRole(userRole)); err != nil {
-				return oauthFailureInternal(nonIntSSO, err)
+			// Update user details
+			user.
+				WithName(fedUserName).
+				WithFederated(fedUser.UserID, idpID).
+				WithWebsiteURL(userWebsiteURL)
+			if err := svc.Services.UserService(tx).Update(user); err != nil {
+				return err
 			}
 		}
+
+		// If there's an avatar URL and the avatar isn't customised, fetch and update the avatar
+		if fedUser.AvatarURL != "" {
+			// Give the process a while to complete, and proceed if it times out
+			util.GoTimeout(
+				util.AvatarFetchTimeout,
+				// We intentionally run this in a non-transactional context, since it's essentially a background operation
+				func() {
+					_ = svc.Services.AvatarService(nil).DownloadAndUpdateByUserID(&user.ID, fedUser.AvatarURL, false)
+				})
+
+			// Otherwise, try to fetch an image from Gravatar, if enabled
+		} else if svc.Services.DynConfigService().GetBool(data.ConfigKeyIntegrationsUseGravatar) {
+			// We intentionally run this in a non-transactional context, since it's a background operation
+			svc.Services.AvatarService(nil).SetFromGravatarAsync(&user.ID, user.Email, false)
+		}
+
+		// Update the token by binding it to the authenticated user
+		token.Owner = user.ID
+		if err := svc.Services.TokenService(tx).Update(token); err != nil {
+			return err
+		}
+
+		// If there's a domain, make sure a domain user exists for this user
+		if domain != nil {
+			_, du, err := svc.Services.DomainService(tx).FindDomainUserByID(&domain.ID, &user.ID, true)
+			if err != nil {
+				return err
+			}
+
+			// If a role was returned by the (SSO) provider and it's changing, update the domain user
+			if userRole != "" && userRole != du.Role() {
+				if err := svc.Services.DomainService(tx).UserModify(du.WithRole(userRole)); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+
+	// If there's an error returned
+	if err != nil {
+		// If there's no message provided, it's an "internal" error
+		if errMessage == "" {
+			return oauthFailureInternal(nonIntSSO, err)
+		}
+		return oauthFailure(nonIntSSO, errMessage, err)
 	}
 
 	// Auth successful. If it's non-interactive SSO
@@ -357,7 +384,7 @@ func AuthOauthInit(params api_general.AuthOauthInitParams) middleware.Responder 
 	}
 
 	// Try to find the passed anonymous token
-	token, err := svc.TheTokenService.FindByValue(params.Token, false)
+	token, err := svc.Services.TokenService(nil).FindByValue(params.Token, false)
 	if errors.Is(err, svc.ErrNotFound) {
 		// Token not found
 		return oauthFailure(false, exmodels.ErrorBadToken.Message, nil)
@@ -374,7 +401,7 @@ func AuthOauthInit(params api_general.AuthOauthInitParams) middleware.Responder 
 	nonIntSSO := false
 	if provider == nil {
 		// Find the domain the user is authenticating on
-		domain, err := svc.TheDomainService.FindByHost(host)
+		domain, err := svc.Services.DomainService(nil).FindByHost(host)
 		if err != nil {
 			return oauthFailureInternal(false, err)
 		}
@@ -412,7 +439,7 @@ func AuthOauthInit(params api_general.AuthOauthInitParams) middleware.Responder 
 		// Generate a random base64-encoded nonce to use as the state on the auth URL
 		var state string
 		if b, err := util.RandomBytes(64); err != nil {
-			return oauthFailureInternal(false, fmt.Errorf("AuthOauthInit: RandomBytes() failed: %w", err))
+			return oauthFailureInternal(false, fmt.Errorf("AuthOauthInit/RandomBytes: %w", err))
 		} else {
 			state = base64.URLEncoding.EncodeToString(b)
 		}
@@ -420,13 +447,12 @@ func AuthOauthInit(params api_general.AuthOauthInitParams) middleware.Responder 
 		// Initiate an authentication session
 		sess, err := provider.BeginAuth(state)
 		if err != nil {
-			return oauthFailureInternal(false, fmt.Errorf("AuthOauthInit: provider.BeginAuth() failed: %w", err))
+			return oauthFailureInternal(false, fmt.Errorf("AuthOauthInit/provider.BeginAuth: %w", err))
 		}
 
 		// Fetch the URL for authenticating with the provider
-		authURL, err = sess.GetAuthURL()
-		if err != nil {
-			return oauthFailureInternal(false, fmt.Errorf("AuthOauthInit: sess.GetAuthURL() failed: %w", err))
+		if authURL, err = sess.GetAuthURL(); err != nil {
+			return oauthFailureInternal(false, fmt.Errorf("AuthOauthInit/sess.GetAuthURL: %w", err))
 		}
 
 		// Serialise the session for persisting
@@ -434,7 +460,7 @@ func AuthOauthInit(params api_general.AuthOauthInitParams) middleware.Responder 
 	}
 
 	// Store the session in the cookie/DB
-	authSession, err := svc.TheAuthSessionService.Create(sessionData, host, token.Value)
+	authSession, err := svc.Services.AuthSessionService(nil).Create(sessionData, host, token.Value)
 	if err != nil {
 		return oauthFailureInternal(nonIntSSO, fmt.Errorf("AuthOauthInit: failed to create auth session: %w", err))
 	}

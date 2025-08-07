@@ -15,6 +15,7 @@ import (
 	_ "github.com/lib/pq"           // PostgreSQL driver
 	_ "github.com/mattn/go-sqlite3" // SQLite3 driver
 	"github.com/op/go-logging"
+	"gitlab.com/comentario/comentario/extend/intf"
 	"gitlab.com/comentario/comentario/internal/config"
 	"gitlab.com/comentario/comentario/internal/util"
 	"os"
@@ -93,7 +94,21 @@ type MigrationLogEntry struct {
 
 //----------------------------------------------------------------------------------------------------------------------
 
-// Database is an opaque structure providing database operations
+// DBX is a database query/statement executor interface, implemented by both Database and DB transaction
+type DBX interface {
+	// Delete returns a new DeleteDataset
+	Delete(table any) *goqu.DeleteDataset
+	// From returns a new SelectDataset
+	From(v ...any) *goqu.SelectDataset
+	// Insert returns a new InsertDataset
+	Insert(table any) *goqu.InsertDataset
+	// Update returns a new UpdateDataset
+	Update(table any) *goqu.UpdateDataset
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+// Database is an opaque structure providing database operations and implementing DBX
 type Database struct {
 	dialect     dbDialect   // Database dialect in use
 	debug       bool        // Whether debug logging is enabled
@@ -146,41 +161,23 @@ func InitDB() (*Database, error) {
 	return db, nil
 }
 
-// Delete returns a new DeleteDataset
+// Begin initiates and returns a new transaction
+func (db *Database) Begin() (*DatabaseTx, error) {
+	if gtx, err := db.goquDB().Begin(); err != nil {
+		return nil, err
+	} else {
+		return &DatabaseTx{tx: gtx}, nil
+	}
+}
+
 func (db *Database) Delete(table any) *goqu.DeleteDataset {
 	return db.goquDB().Delete(table)
 }
 
-// goquDB returns a goqu.Database to use for queries
-func (db *Database) goquDB() *goqu.Database {
-	gd := db.dialect.dialectWrapper().DB(db.db)
-	gd.Logger(db.debugLogger)
-	return gd
-}
-
-// ExecOne executes the provided Executable statement against the database and verifies there's exactly one row affected
-func (db *Database) ExecOne(x Executable) error {
-	// Run the statement
-	if res, err := x.Executor().Exec(); err != nil {
-		return err
-	} else if cnt, err := res.RowsAffected(); err != nil {
-		return fmt.Errorf("RowsAffected() failed: %v", err)
-	} else if cnt == 0 {
-		return sql.ErrNoRows
-	} else if cnt != 1 {
-		return fmt.Errorf("statement affected %d rows, want 1", cnt)
-	}
-
-	// Succeeded
-	return nil
-}
-
-// From returns a new SelectDataset
 func (db *Database) From(v ...any) *goqu.SelectDataset {
 	return db.goquDB().From(v...)
 }
 
-// Insert returns a new InsertDataset
 func (db *Database) Insert(table any) *goqu.InsertDataset {
 	return db.goquDB().Insert(table)
 }
@@ -216,7 +213,7 @@ func (db *Database) Migrate(seed string) error {
 		// If something was actually done
 		if status != "" {
 			// Add a log record, logging any error to the console
-			if dbErr := db.ExecOne(db.Insert("cm_migration_log").Rows(&MigrationLogEntry{
+			if dbErr := ExecOne(db.Insert("cm_migration_log").Rows(&MigrationLogEntry{
 				Filename:    filename,
 				CreatedTime: time.Now().UTC(),
 				MD5Expected: util.MD5ToHex(csExpected),
@@ -239,7 +236,7 @@ func (db *Database) Migrate(seed string) error {
 			InstalledTime: time.Now().UTC(),
 			MD5:           util.MD5ToHex(&csActual),
 		}
-		if err := db.ExecOne(db.Insert("cm_migrations").Rows(mig).OnConflict(goqu.DoUpdate("filename", mig))); err != nil {
+		if err := ExecOne(db.Insert("cm_migrations").Rows(mig).OnConflict(goqu.DoUpdate("filename", mig))); err != nil {
 			return fmt.Errorf("failed to register migration '%s' in the database: %v", filename, err)
 		}
 
@@ -374,6 +371,37 @@ func (db *Database) Version() string {
 	return db.version
 }
 
+// WithTx runs the provided function in the context of a transaction, which is created before calling the function and
+// either committed or rolled back (if the function returned an error)
+func (db *Database) WithTx(f func(tx *DatabaseTx) error) (err error) {
+	// Initiate a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		logger.Errorf("Database.WithTx/Begin: %v", err)
+		return err
+	}
+
+	// Call the wrapped function, providing it with an instance of the transaction
+	defer func() {
+		if p := recover(); p != nil {
+			logger.Errorf("Database.WithTx: panic from func: %v", p)
+			_ = tx.Rollback()
+			panic(p)
+		}
+		if err != nil {
+			logger.Errorf("Database.WithTx/func(): %v", err)
+			if e := tx.Rollback(); e != nil {
+				logger.Errorf("Database.WithTx/post-func Rollback: %v", err)
+				err = e
+			}
+		} else if e := tx.Commit(); e != nil {
+			logger.Errorf("Database.WithTx/post-func Commit: %v", err)
+			err = e
+		}
+	}()
+	return f(tx)
+}
+
 // connect establishes a database connection up to the configured number of attempts
 func (db *Database) connect() error {
 	logger.Infof("Connecting to database %s", db.getConnectString(true))
@@ -471,17 +499,9 @@ func (db *Database) getAvailableMigrations() ([]string, error) {
 func (db *Database) getConnectString(mask bool) string {
 	switch db.dialect {
 	case dbPostgres:
-		return fmt.Sprintf(
-			"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-			config.SecretsConfig.Postgres.Username,
-			util.If(mask, "********", config.SecretsConfig.Postgres.Password),
-			config.SecretsConfig.Postgres.Host,
-			config.SecretsConfig.Postgres.Port,
-			config.SecretsConfig.Postgres.Database,
-			config.SecretsConfig.Postgres.SSLMode)
+		return config.SecretsConfig.Postgres.ConnectString(mask)
 	case dbSQLite3:
-		// Enable the enforcement of foreign keys
-		return fmt.Sprintf("%s?_fk=true", config.SecretsConfig.SQLite3.File)
+		return config.SecretsConfig.SQLite3.ConnectString()
 	}
 	return "(?)"
 }
@@ -498,7 +518,7 @@ func (db *Database) getInstalledMigrations() (map[string][16]byte, error) {
 	// Query the migrations table
 	var dbRecs []Migration
 	if err := db.From("cm_migrations").ScanStructs(&dbRecs); err != nil {
-		return nil, fmt.Errorf("getInstalledMigrations: ScanStructs() failed: %w", err)
+		return nil, fmt.Errorf("Database.getInstalledMigrations/ScanStructs: %w", err)
 	}
 
 	// Convert the files into a map
@@ -506,9 +526,9 @@ func (db *Database) getInstalledMigrations() (map[string][16]byte, error) {
 	for _, r := range dbRecs {
 		// Parse the sum as binary
 		if b, err := r.MD5Bytes(); err != nil {
-			return nil, fmt.Errorf("getInstalledMigrations: failed to decode MD5 checksum for migration '%s': %v", r.Filename, err)
+			return nil, fmt.Errorf("Database.getInstalledMigrations: failed to decode MD5 checksum for migration '%s': %v", r.Filename, err)
 		} else if l := len(b); l != 16 {
-			return nil, fmt.Errorf("getInstalledMigrations: wrong MD5 checksum length for migration '%s': got %d, want 16", r.Filename, l)
+			return nil, fmt.Errorf("Database.getInstalledMigrations: wrong MD5 checksum length for migration '%s': got %d, want 16", r.Filename, l)
 		} else {
 			var b16 [16]byte
 			copy(b16[:], b)
@@ -518,6 +538,13 @@ func (db *Database) getInstalledMigrations() (map[string][16]byte, error) {
 
 	// Succeeded
 	return migMap, nil
+}
+
+// goquDB returns a goqu.Database to use for queries
+func (db *Database) goquDB() *goqu.Database {
+	gd := db.dialect.dialectWrapper().DB(db.db)
+	gd.Logger(db.debugLogger)
+	return gd
 }
 
 // installMigration installs a database migration contained in the given file, returning its actual MD5 checksum and the
@@ -683,4 +710,94 @@ func (db *Database) tryConnect(num, total int) (err error) {
 		logger.Warningf("[Attempt %d/%d] Failed to ping database: %v", num, total, err)
 	}
 	return
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+// DatabaseTx represents a database transaction, implementing DBX
+type DatabaseTx struct {
+	tx    *goqu.TxDatabase // Reference to the underlying transaction
+	cc    []intf.Tx        // Child transactions, which get commited and rolled back together with (prior to) this one
+	stale bool             // Whether the transaction is ended and hence unusable
+}
+
+// AddChild adds a child transaction to the transaction
+func (dt *DatabaseTx) AddChild(tx intf.Tx) {
+	dt.cc = append(dt.cc, tx)
+}
+
+// Commit the transaction
+func (dt *DatabaseTx) Commit() error {
+	defer func() { dt.stale = true }()
+	// Commit all child transactions
+	for _, c := range dt.cc {
+		if err := c.Commit(); err != nil {
+			return err
+		}
+	}
+	// Commit the DB transaction
+	return dt.tx.Commit()
+}
+
+// Delete implementation of DBX
+func (dt *DatabaseTx) Delete(table any) *goqu.DeleteDataset {
+	dt.checkStale()
+	return dt.tx.Delete(table)
+}
+
+// From implementation of DBX
+func (dt *DatabaseTx) From(v ...any) *goqu.SelectDataset {
+	dt.checkStale()
+	return dt.tx.From(v...)
+}
+
+// Insert implementation of DBX
+func (dt *DatabaseTx) Insert(table any) *goqu.InsertDataset {
+	dt.checkStale()
+	return dt.tx.Insert(table)
+}
+
+// Rollback the transaction
+func (dt *DatabaseTx) Rollback() error {
+	defer func() { dt.stale = true }()
+	// Roll back all child transactions
+	for _, c := range dt.cc {
+		if err := c.Rollback(); err != nil {
+			return err
+		}
+	}
+	// Roll back the DB transaction
+	return dt.tx.Rollback()
+}
+
+// Update implementation of DBX
+func (dt *DatabaseTx) Update(table any) *goqu.UpdateDataset {
+	dt.checkStale()
+	return dt.tx.Update(table)
+}
+
+// checkStale panics if the transaction is stale
+func (dt *DatabaseTx) checkStale() {
+	if dt.stale {
+		panic("transaction is stale and hence unusable")
+	}
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+// ExecOne executes the provided Executable statement and verifies there's exactly one row affected
+func ExecOne(x Executable) error {
+	// Run the statement
+	if res, err := x.Executor().Exec(); err != nil {
+		return err
+	} else if cnt, err := res.RowsAffected(); err != nil {
+		return fmt.Errorf("RowsAffected: %v", err)
+	} else if cnt == 0 {
+		return sql.ErrNoRows
+	} else if cnt != 1 {
+		return fmt.Errorf("statement affected %d rows, want 1", cnt)
+	}
+
+	// Succeeded
+	return nil
 }

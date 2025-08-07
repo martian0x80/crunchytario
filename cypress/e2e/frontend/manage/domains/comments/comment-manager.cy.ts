@@ -149,7 +149,7 @@ context('Comment Manager', () => {
                 cy.get('@commentList').texts('.comment-text')           .should('arrayMatch', undeletedComments.map(c => c.text));
 
                 // Sort by Created ASC
-                cy.get('@commentManager').changeListSort('Created', 'asc');
+                cy.get('@commentManager').changeListSort('Created', 'desc', 'Created', 'asc');
                 cy.get('@commentManager').verifyListFooter(25, true);
                 cy.get('@commentList').texts('app-user-link .user-name').should('arrayMatch', undeletedComments.slice(15, 40).reverse().map(c => c.author));
                 cy.get('@commentList').texts('.comment-text')           .should('arrayMatch', undeletedComments.slice(15, 40).reverse().map(c => c.text));
@@ -161,7 +161,7 @@ context('Comment Manager', () => {
 
                 // Sort by Score ASC
                 const commentsScore = undeletedComments.slice().sort((a, b) => a.score - b.score).map(c => c.score.toString());
-                cy.get('@commentManager').changeListSort('Score', 'asc');
+                cy.get('@commentManager').changeListSort('Created', 'asc', 'Score', 'asc');
                 cy.get('@commentManager').verifyListFooter(25, true);
                 cy.get('@commentList').texts('.comment-score').should('arrayMatch', commentsScore.slice(0, 25));
                 // Add more
@@ -170,7 +170,7 @@ context('Comment Manager', () => {
                 cy.get('@commentList').texts('.comment-score').should('arrayMatch', commentsScore.slice());
 
                 // Sort by Score DESC
-                cy.get('@commentManager').changeListSort('Score', 'desc');
+                cy.get('@commentManager').changeListSort('Score', 'asc', 'Score', 'desc');
                 cy.get('@commentManager').verifyListFooter(25, true);
                 cy.get('@commentList').texts('.comment-score').should('arrayMatch', commentsScore.slice(15, 40).reverse());
                 // Add more
@@ -182,6 +182,17 @@ context('Comment Manager', () => {
                 cy.get('@commentList').find('.comment-body').eq(7).click();
                 cy.isAt(pagePath + '/f08639de-ab7b-4032-bdce-a021bf07e596');
             });
+
+            it('retains chosen sort order', () =>
+                cy.checkListSortRetained(
+                    '@commentManager',
+                    [
+                        {sort: 'Created', order: 'desc'},
+                        {sort: 'Created', order: 'asc'},
+                        {sort: 'Score',   order: 'asc'},
+                        {sort: 'Score',   order: 'desc'},
+                        {sort: 'Created', order: 'asc'},
+                    ]));
 
             it('filters comments', () => {
 

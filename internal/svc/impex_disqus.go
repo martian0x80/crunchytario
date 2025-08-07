@@ -59,7 +59,7 @@ func disqusImport(curUser *data.User, domain *data.Domain, buf []byte) *ImportRe
 	// Unmarshal the XML data
 	exp := disqusXML{}
 	if err := xml.Unmarshal(buf, &exp); err != nil {
-		logger.Errorf("disqusImport: xml.Unmarshal() failed: %v", err)
+		logger.Errorf("disqusImport/Unmarshal: %v", err)
 		return importError(err)
 	}
 
@@ -132,7 +132,7 @@ func disqusImport(curUser *data.User, domain *data.Domain, buf []byte) *ImportRe
 			pageID = id
 
 			// Page doesn't exist. Find or insert a page with this path
-		} else if page, added, err := ThePageService.UpsertByDomainPath(domain, u.Path, thread.Title, nil); err != nil {
+		} else if page, added, err := Services.PageService(nil).UpsertByDomainPath(domain, u.Path, thread.Title, nil); err != nil {
 			return result.WithError(err)
 
 		} else {
@@ -193,12 +193,12 @@ func disqusImport(curUser *data.User, domain *data.Domain, buf []byte) *ImportRe
 	result.CommentsImported, result.CommentsNonDeleted, result.Error = insertCommentsForParent(util.ZeroUUID, commentParentIDMap, countsPerPage)
 
 	// Increase comment count on the domain, ignoring errors
-	_ = TheDomainService.IncrementCounts(&domain.ID, result.CommentsNonDeleted, 0)
+	_ = Services.DomainService(nil).IncrementCounts(&domain.ID, result.CommentsNonDeleted, 0)
 
 	// Increase comment counts on all pages
 	for pageID, pc := range countsPerPage {
 		if pc > 0 {
-			_ = ThePageService.IncrementCounts(&pageID, pc, 0)
+			_ = Services.PageService(nil).IncrementCounts(&pageID, pc, 0)
 		}
 	}
 

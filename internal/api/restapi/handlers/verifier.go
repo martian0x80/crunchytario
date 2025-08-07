@@ -77,7 +77,7 @@ func (v *verifier) DomainConfigItems(items []*models.DynamicConfigItem) middlewa
 	// Iterate every item from the list
 	for _, item := range items {
 		// Pass the key and the value to the domain config service for validation
-		if err := svc.TheDomainConfigService.ValidateKeyValue(swag.StringValue(item.Key), swag.StringValue(item.Value)); err != nil {
+		if err := svc.Services.DomainConfigService(nil).ValidateKeyValue(swag.StringValue(item.Key), swag.StringValue(item.Value)); err != nil {
 			return respBadRequest(exmodels.ErrorInvalidPropertyValue.WithDetails(err.Error()))
 		}
 	}
@@ -93,7 +93,7 @@ func (v *verifier) DomainPageCanUpdatePathTo(page *data.DomainPage, newPath stri
 	}
 
 	// Try to find an existing page with that path
-	if _, err := svc.ThePageService.FindByDomainPath(&page.DomainID, newPath); err == nil {
+	if _, err := svc.Services.PageService(nil).FindByDomainPath(&page.DomainID, newPath); err == nil {
 		// Path is already used by another page
 		return respBadRequest(exmodels.ErrorPagePathAlreadyExists)
 	} else if !errors.Is(err, svc.ErrNotFound) {
@@ -113,7 +113,7 @@ func (v *verifier) DomainHostCanBeAdded(host string) middleware.Responder {
 	}
 
 	// Make sure domain host isn't taken yet
-	if _, err := svc.TheDomainService.FindByHost(host); err == nil {
+	if _, err := svc.Services.DomainService(nil).FindByHost(host); err == nil {
 		// Domain host already exists in the DB
 		return respBadRequest(exmodels.ErrorHostAlreadyExists)
 	} else if !errors.Is(err, svc.ErrNotFound) {
@@ -189,11 +189,11 @@ func (v *verifier) LocalSignupEnabled(domainID *uuid.UUID) middleware.Responder 
 	var err error
 	if domainID == nil {
 		// Frontend signup
-		item, err = svc.TheDynConfigService.Get(data.ConfigKeyAuthSignupEnabled)
+		item, err = svc.Services.DynConfigService().Get(data.ConfigKeyAuthSignupEnabled)
 
 	} else {
 		// Embed signup
-		item, err = svc.TheDomainConfigService.Get(domainID, data.DomainConfigKeyLocalSignupEnabled)
+		item, err = svc.Services.DomainConfigService(nil).Get(domainID, data.DomainConfigKeyLocalSignupEnabled)
 	}
 
 	// Check for error
@@ -212,9 +212,9 @@ func (v *verifier) LocalSignupEnabled(domainID *uuid.UUID) middleware.Responder 
 
 func (v *verifier) UserCanAddDomain(user *data.User) middleware.Responder {
 	// If the user isn't a superuser and no new owners are allowed
-	if !user.IsSuperuser && !svc.TheDynConfigService.GetBool(data.ConfigKeyOperationNewOwnerEnabled) {
+	if !user.IsSuperuser && !svc.Services.DynConfigService().GetBool(data.ConfigKeyOperationNewOwnerEnabled) {
 		// Check if this user already owns any domain
-		if i, err := svc.TheDomainService.CountForUser(&user.ID, true, false); err != nil {
+		if i, err := svc.Services.DomainService(nil).CountForUser(&user.ID, true, false); err != nil {
 			return respServiceError(err)
 		} else if i == 0 {
 			// Not an owner
@@ -241,7 +241,7 @@ func (v *verifier) UserCanChangeEmailTo(user *data.User, newEmail string) middle
 	}
 
 	// Try to find an existing user by email
-	if _, err := svc.TheUserService.FindUserByEmail(newEmail); errors.Is(err, svc.ErrNotFound) {
+	if _, err := svc.Services.UserService(nil).FindUserByEmail(newEmail); errors.Is(err, svc.ErrNotFound) {
 		// Success: no such email yet
 		return nil
 	} else if err != nil {
@@ -256,7 +256,7 @@ func (v *verifier) UserCanChangeEmailTo(user *data.User, newEmail string) middle
 func (v *verifier) UserCanDeleteComment(domainID *uuid.UUID, user *data.User, domainUser *data.DomainUser, comment *data.Comment) middleware.Responder {
 	// If the user is a moderator+, deletion is controlled by the "moderator deletion" setting
 	if (user.IsSuperuser || domainUser.CanModerate()) &&
-		svc.TheDomainConfigService.GetBool(domainID, data.DomainConfigKeyCommentDeletionModerator) {
+		svc.Services.DomainConfigService(nil).GetBool(domainID, data.DomainConfigKeyCommentDeletionModerator) {
 		return nil
 	}
 
@@ -264,7 +264,7 @@ func (v *verifier) UserCanDeleteComment(domainID *uuid.UUID, user *data.User, do
 	if !comment.IsAnonymous() &&
 		domainUser != nil &&
 		comment.UserCreated.UUID == domainUser.UserID &&
-		svc.TheDomainConfigService.GetBool(domainID, data.DomainConfigKeyCommentDeletionAuthor) {
+		svc.Services.DomainConfigService(nil).GetBool(domainID, data.DomainConfigKeyCommentDeletionAuthor) {
 		return nil
 	}
 
@@ -288,7 +288,7 @@ func (v *verifier) UserCanModerateDomain(user *data.User, domainUser *data.Domai
 
 func (v *verifier) UserCanSignupWithEmail(email string) (*exmodels.Error, middleware.Responder) {
 	// Try to find an existing user by email
-	user, err := svc.TheUserService.FindUserByEmail(email)
+	user, err := svc.Services.UserService(nil).FindUserByEmail(email)
 	if errors.Is(err, svc.ErrNotFound) {
 		// Success: no such email
 		return nil, nil
@@ -316,7 +316,7 @@ func (v *verifier) UserCanSignupWithEmail(email string) (*exmodels.Error, middle
 func (v *verifier) UserCanUpdateComment(domainID *uuid.UUID, user *data.User, domainUser *data.DomainUser, comment *data.Comment) middleware.Responder {
 	// If the user is a moderator+, editing is controlled by the "moderator editing" setting
 	if (user.IsSuperuser || domainUser.CanModerate()) &&
-		svc.TheDomainConfigService.GetBool(domainID, data.DomainConfigKeyCommentEditingModerator) {
+		svc.Services.DomainConfigService(nil).GetBool(domainID, data.DomainConfigKeyCommentEditingModerator) {
 		return nil
 	}
 
@@ -324,7 +324,7 @@ func (v *verifier) UserCanUpdateComment(domainID *uuid.UUID, user *data.User, do
 	if !comment.IsAnonymous() &&
 		domainUser != nil &&
 		comment.UserCreated.UUID == domainUser.UserID &&
-		svc.TheDomainConfigService.GetBool(domainID, data.DomainConfigKeyCommentEditingAuthor) {
+		svc.Services.DomainConfigService(nil).GetBool(domainID, data.DomainConfigKeyCommentEditingAuthor) {
 		return nil
 	}
 

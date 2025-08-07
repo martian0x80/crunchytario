@@ -217,6 +217,21 @@ Cypress.Commands.add(
             .should(fb => text && expect(fb.text()).eq(text))
             .wrap(element));
 
+Cypress.Commands.add(
+    'typeaheadSelect',
+    {prevSubject: 'element'},
+    (element: JQueryWithSelector, text: string, setAsValue?: boolean, expectNumItems?: number) => {
+        // Set the element text, if needed
+        if (setAsValue) {
+            cy.wrap(element).setValue(text);
+        }
+        // Start looking for ngb-typeahead-window from the root because it can also be attached to <body>
+        return cy.get('ngb-typeahead-window').should('be.visible')
+            .find('button').should('have.length', expectNumItems || 1)
+            .contains(text).click()
+            .wrap(element);
+    });
+
 Cypress.Commands.add('login', (creds: Cypress.Credentials, options?: Cypress.LoginOptions) => {
     // Go to the login page and verify, if needed
     if (options?.goTo ?? true) {
@@ -281,7 +296,7 @@ Cypress.Commands.add('loginFederatedViaApi', (id: string, targetUrl: string, vis
     cy.isLoggedIn();
 });
 
-Cypress.Commands.add('noToast', () => void cy.get('app-toast ngb-toast').should('not.exist'));
+Cypress.Commands.add('noToast', (): void => void cy.get('app-toast ngb-toast').should('not.exist'));
 
 Cypress.Commands.add('toastCheckAndClose', (id: string, details?: string) => {
     // Verify the toast's message ID
@@ -360,27 +375,50 @@ Cypress.Commands.add(
     (element: JQueryWithSelector) => cy.wrap(element).dlgButtonClick('Cancel'));
 
 Cypress.Commands.add(
-    'changeListSort',
-    {prevSubject: 'optional'},
-    (element: JQueryWithSelector, label: string, expectOrder: 'asc' | 'desc') => {
-        const el = () => (element ? cy.wrap(element) : cy).find('app-sort-selector');
+    'checkListSort',
+    {prevSubject: 'element'},
+    (element: JQueryWithSelector, sort: string, order: 'asc' | 'desc') =>
+        cy.wrap(element).find('app-sort-selector button[ngbdropdowntoggle]')
+            .should('have.text',  sort)
+            .should('have.class', 'sort-' + order));
 
-        // Click the sort dropdown
-        el().find('button[ngbdropdowntoggle]')
-            .should('have.text', 'Sort')
-            .click();
+Cypress.Commands.add(
+    'changeListSort',
+    {prevSubject: 'element'},
+    (element: JQueryWithSelector, curSort: string, curOrder: 'asc' | 'desc', label: string, expectOrder: 'asc' | 'desc') => {
+        // Check the current sort on the button, then click the sort dropdown
+        cy.wrap(element).checkListSort(curSort, curOrder).click();
 
         // Click the required sort button and check the sort order
-        el().contains('div[ngbdropdownmenu] button', label)
+        cy.wrap(element).contains('app-sort-selector div[ngbdropdownmenu] button', label)
             .click()
             .should('have.class', 'sort-' + expectOrder)
             .should('have.attr', 'aria-checked', 'true');
 
-        // Click on sort dropdown again
-        el().find('button[ngbdropdowntoggle]').click();
+        // Check the sort dropdown button updated title/icon, then click it again
+        cy.wrap(element).checkListSort(label, expectOrder).click();
 
         // Verify the sort menu is gone
-        el().find('div[ngbdropdownmenu]').should('not.be.visible');
+        cy.wrap(element).find('app-sort-selector div[ngbdropdownmenu]').should('not.be.visible');
+    });
+
+Cypress.Commands.add(
+    'checkListSortRetained',
+    {prevSubject: false},
+    (selector: string, sequence: {sort: string; order: 'asc' | 'desc'}[]) => {
+        // Check the initial sort
+        cy.get(selector).checkListSort(sequence[0].sort, sequence[0].order);
+
+        // Iterate all steps in order
+        for (let i = 0; i < sequence.length; i++) {
+            // Reload the page
+            cy.reload();
+
+            // Verify the current sort and switch it to the next, looping over to the first element at the last step
+            const curr = sequence[i];
+            const next = i === sequence.length-1 ? sequence[0] : sequence[i+1];
+            cy.get(selector).changeListSort(curr.sort, curr.order, next.sort, next.order);
+        }
     });
 
 Cypress.Commands.add(
@@ -412,7 +450,7 @@ Cypress.Commands.add(
         // Reload the page
         cy.reload();
 
-        // Wait for hte app to settle
+        // Wait for the app to settle
         cy.wait(100);
 
         // Verify we're still on the same page
@@ -663,7 +701,7 @@ Cypress.Commands.add(
 Cypress.Commands.add('testSiteVisit', {prevSubject: false}, (path: string) =>
     cy.visit(`${testSiteUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`));
 
-Cypress.Commands.add('testSiteIsLoggedIn', {prevSubject: false}, (name: string) =>
+Cypress.Commands.add('testSiteIsLoggedIn', {prevSubject: false}, (name: string): void =>
     void cy.get('.comentario-root .comentario-profile-bar .comentario-name').should('have.text', name).and('be.visible'));
 
 Cypress.Commands.add(
@@ -758,12 +796,12 @@ Cypress.Commands.add('testSiteSsoLogin', {prevSubject: false}, () => {
 Cypress.Commands.add(
     'testSiteLogout',
     {prevSubject: false},
-    () => void cy.get('.comentario-root .comentario-profile-bar button[title="Logout"]').click());
+    (): void => void cy.get('.comentario-root .comentario-profile-bar button[title="Logout"]').click());
 
 Cypress.Commands.add(
     'testSiteCheckMessage',
     {prevSubject: false},
-    (message: string, success?: boolean) =>
+    (message: string, success?: boolean): void =>
         void cy.contains('.comentario-root .comentario-message-box', message)
             .should('be.visible')
             .and(success ? 'not.have.class' : 'have.class', 'comentario-error'));
@@ -771,14 +809,14 @@ Cypress.Commands.add(
 Cypress.Commands.add('backendReset', () =>
     cy.request('POST', '/api/e2e/reset').its('status').should('eq', 204));
 
-Cypress.Commands.add('backendUpdateDynConfig', (values: Record<string, string | number | boolean>) =>
+Cypress.Commands.add('backendUpdateDynConfig', (values: Record<string, string | number | boolean>): void =>
     void cy.request(
             'PUT',
             '/api/e2e/config/dynamic',
             Object.entries(values).map(([k, v]) => ({key: k, value: String(v)})))
         .its('status').should('eq', 204));
 
-Cypress.Commands.add('backendUpdateLatestRelease', (name: string, version: string, pageUrl: string) =>
+Cypress.Commands.add('backendUpdateLatestRelease', (name: string, version: string, pageUrl: string): void =>
     void cy.request('PUT', '/api/e2e/config/versions/latestRelease', {name, version, pageUrl})
         .its('status').should('eq', 204));
 
@@ -788,21 +826,21 @@ Cypress.Commands.add('backendGetSentEmails', () => {
     return cy.request('/api/e2e/mails').should(response => expect(response.status).to.eq(200)).its('body');
 });
 
-Cypress.Commands.add('backendPatchDomain', (id: string, values: any) =>
+Cypress.Commands.add('backendPatchDomain', (id: string, values: any): void =>
     void cy.request('PATCH', `/api/e2e/domains/${id}`, values).its('status').should('eq', 204));
 
-Cypress.Commands.add('backendUpdateDomainAttrs', (id: string, values: Record<string, string | number | boolean>) =>
+Cypress.Commands.add('backendUpdateDomainAttrs', (id: string, values: Record<string, string | number | boolean>): void =>
     void cy.request('PUT', `/api/e2e/domains/${id}/attrs`, {values}).its('status').should('eq', 204));
 
-Cypress.Commands.add('backendUpdateDomainConfig', (id: string, values: Record<string, string | number | boolean>) =>
+Cypress.Commands.add('backendUpdateDomainConfig', (id: string, values: Record<string, string | number | boolean>): void =>
     void cy.request(
             'PUT',
             `/api/e2e/domains/${id}/config`,
             Object.entries(values).map(([k, v]) => ({key: k, value: String(v)})))
         .its('status').should('eq', 204));
 
-Cypress.Commands.add('backendUpdateDomainIdps', (id: string, idps: string[]) =>
+Cypress.Commands.add('backendUpdateDomainIdps', (id: string, idps: string[]): void =>
     void cy.request('PUT', `/api/e2e/domains/${id}/idps`, idps).its('status').should('eq', 204));
 
-Cypress.Commands.add('backendUpdateUserAttrs', (id: string, values: Record<string, string | number | boolean>) =>
+Cypress.Commands.add('backendUpdateUserAttrs', (id: string, values: Record<string, string | number | boolean>): void =>
     void cy.request('PUT', `/api/e2e/users/${id}/attrs`, {values}).its('status').should('eq', 204));

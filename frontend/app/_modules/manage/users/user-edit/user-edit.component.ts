@@ -1,11 +1,10 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, computed, effect, input } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ApiGeneralService, Principal, User } from '../../../../../generated-api';
+import { ApiGeneralService, User } from '../../../../../generated-api';
 import { ProcessingStatus } from '../../../../_utils/processing-status';
 import { ToastService } from '../../../../_services/toast.service';
 import { Paths } from '../../../../_utils/consts';
-import { AuthService } from '../../../../_services/auth.service';
 import { Utils } from '../../../../_utils/utils';
 import { XtraValidators } from '../../../../_utils/xtra-validators';
 import { ConfigService } from '../../../../_services/config.service';
@@ -13,6 +12,10 @@ import { SpinnerDirective } from '../../../tools/_directives/spinner.directive';
 import { PasswordInputComponent } from '../../../tools/password-input/password-input.component';
 import { InfoIconComponent } from '../../../tools/info-icon/info-icon.component';
 import { ValidatableDirective } from '../../../tools/_directives/validatable.directive';
+import { PrincipalService } from '../../../../_services/principal.service';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { EMPTY, switchMap } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Component({
     selector: 'app-user-edit',
@@ -26,16 +29,20 @@ import { ValidatableDirective } from '../../../tools/_directives/validatable.dir
         ValidatableDirective,
     ],
 })
-export class UserEditComponent implements OnInit {
+export class UserEditComponent {
+
+    /** ID of the domain page to edit. */
+    readonly id = input<string>();
 
     /** User being edited. */
-    user?: User;
-
-    /** Currently authenticated principal. */
-    principal?: Principal;
+    readonly user = toSignal(toObservable(this.id)
+        .pipe(switchMap(id => id ? this.api.userGet(id).pipe(this.loading.processing(), map(r => r.user)) : EMPTY)));
 
     /** Available interface languages. */
     readonly languages = this.cfgSvc.staticConfig.uiLanguages || [];
+
+    /** ID of the currently authenticated user. */
+    readonly curUserId = computed(() => this.principalSvc.principal()?.id);
 
     readonly loading = new ProcessingStatus();
     readonly saving  = new ProcessingStatus();
@@ -56,44 +63,40 @@ export class UserEditComponent implements OnInit {
         private readonly router: Router,
         private readonly api: ApiGeneralService,
         private readonly cfgSvc: ConfigService,
-        private readonly authSvc: AuthService,
+        private readonly principalSvc: PrincipalService,
         private readonly toastSvc: ToastService,
-    ) {}
-
-    @Input()
-    set id(id: string) {
-        // Fetch the user
-        this.api.userGet(id)
-            .pipe(this.loading.processing())
-            .subscribe(r => {
-                this.user = r.user!;
-
+    ) {
+        effect(() => {
+            const u = this.user();
+            if (u) {
                 // Make sure the current user's language is also on the list, event if it's not directly supported (in
                 // which case a reasonable fallback will be used)
-                if (!this.languages.find(l => l.id === this.user!.langId)) {
-                    this.languages.splice(0, 0, {id: this.user.langId, nameNative: this.user.langId});
+                if (!this.languages.find(l => l.id === u.langId)) {
+                    this.languages.splice(0, 0, {id: u.langId, nameNative: u.langId});
                 }
 
                 // Update the form
                 this.form.setValue({
-                    name:       this.user.name ?? '',
-                    email:      this.user.email ?? '',
+                    name:       u.name ?? '',
+                    email:      u.email ?? '',
                     password:   '',
-                    websiteUrl: this.user.websiteUrl ?? '',
-                    langId:     this.user.langId,
-                    remarks:    this.user.remarks ?? '',
-                    confirmed:  !!this.user.confirmed,
-                    superuser:  !!this.user.isSuperuser,
+                    websiteUrl: u.websiteUrl ?? '',
+                    langId:     u.langId,
+                    remarks:    u.remarks ?? '',
+                    confirmed:  !!u.confirmed,
+                    superuser:  !!u.isSuperuser,
                 });
-                this.enableControls();
-            });
-    }
+            }
 
-    ngOnInit(): void {
-        // Monitor principal changes
-        this.authSvc.principal.subscribe(p => {
-            this.principal = p;
-            this.enableControls();
+            // If the user is a federated one, disable irrelevant controls
+            if (u?.federatedIdP || u?.federatedSso) {
+                ['name', 'email', 'password', 'websiteUrl'].forEach(c => this.form.get(c)!.disable());
+            }
+
+            // Disable checkboxes when the user edits themselves
+            Utils.enableControls(
+                this.curUserId() !== u?.id,
+                this.form.controls.confirmed, this.form.controls.superuser);
         });
     }
 
@@ -102,8 +105,9 @@ export class UserEditComponent implements OnInit {
         this.form.markAllAsTouched();
 
         // Submit the form if it's valid
-        if (this.user && this.form.valid) {
-            const selfEdit = this.principal!.id === this.user.id;
+        const uid = this.user()?.id;
+        if (uid && this.form.valid) {
+            const selfEdit = this.curUserId() === uid;
             const vals = this.form.value;
             const dto: User = {
                 name:        vals.name,
@@ -115,7 +119,7 @@ export class UserEditComponent implements OnInit {
                 confirmed:   selfEdit || vals.confirmed,
                 isSuperuser: selfEdit || vals.superuser,
             };
-            this.api.userUpdate(this.user.id!, {user: dto})
+            this.api.userUpdate(uid, {user: dto})
                 .pipe(this.saving.processing())
                 .subscribe(r => {
                     // Add a success toast
@@ -124,15 +128,5 @@ export class UserEditComponent implements OnInit {
                     return this.router.navigate([Paths.manage.users, r.user!.id]);
                 });
         }
-    }
-
-    private enableControls() {
-        // If the user is a federated one, disable irrelevant controls
-        if (this.user?.federatedIdP || this.user?.federatedSso) {
-            ['name', 'email', 'password', 'websiteUrl'].forEach(c => this.form.get(c)!.disable());
-        }
-
-        // Disable checkboxes when the user edits themselves
-        Utils.enableControls(this.principal?.id !== this.user?.id, this.form.controls.confirmed, this.form.controls.superuser);
     }
 }

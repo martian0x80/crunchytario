@@ -27,8 +27,8 @@ stages:
   - post-deploy
 
 variables:
-  CI_TOOLS_VERSION: "v45"
-  DEPLOYER_IMAGE: "alpine/k8s:1.29.2"
+  CI_TOOLS_VERSION: "v48"
+  DEPLOYER_IMAGE: "alpine/k8s:1.31.5"
   # Namespace to deploy Kubernetes objects into
   NAMESPACE: ys-comentario
   PUSH_IMAGE: "false"
@@ -125,6 +125,7 @@ build:
     name: comentario
     expire_in: 30 days
     paths:
+      - cypress/reports
       - cypress/screenshots
       - cypress/videos
       - tmp/logs
@@ -165,6 +166,9 @@ build:
           --home-content-url="https://edge.docs.comentario.app/en/embed/front-page/"
           &> ./tmp/logs/comentario-server.log &
     - waitFor http://localhost:8080/en/
+
+    # Let all database cleaners finish their first run
+    - sleep 10
 
     # Start the relay to pass localhost:8000 requests through to comentario-test-site:80
     - ./dist/comentario_linux_amd64/comentario-relay 

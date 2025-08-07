@@ -8,6 +8,7 @@ import (
 	"gitlab.com/comentario/comentario/internal/api/exmodels"
 	"gitlab.com/comentario/comentario/internal/api/restapi/operations/api_general"
 	"gitlab.com/comentario/comentario/internal/data"
+	"gitlab.com/comentario/comentario/internal/persistence"
 	"gitlab.com/comentario/comentario/internal/svc"
 	"io"
 	"strings"
@@ -18,8 +19,8 @@ func UserAvatarGet(params api_general.UserAvatarGetParams) middleware.Responder 
 	if id, r := parseUUID(params.UUID); r != nil {
 		return r
 
-		// Find the user avatar by their ID
-	} else if ua, err := svc.TheAvatarService.GetByUserID(id); err != nil {
+		// Find the user avatar by their ID. No transaction required as it's an atomic operation
+	} else if ua, err := svc.Services.AvatarService(nil).GetByUserID(id); err != nil {
 		return respServiceError(err)
 
 	} else if ua == nil {
@@ -57,23 +58,29 @@ func UserBan(params api_general.UserBanParams, user *data.User) middleware.Respo
 
 	// Update the user if necessary
 	ban := swag.BoolValue(params.Body.Ban)
-	if u.Banned != ban {
-		if err := svc.TheUserService.UpdateBanned(&user.ID, u, ban); err != nil {
-			return respServiceError(err)
-		}
-	}
-
-	// When banning the user, all user's comments can also be deleted or purged
 	var cntDel int64
-	if ban && params.Body.DeleteComments {
-		var err error
-		if params.Body.PurgeComments {
-			if cntDel, err = svc.TheCommentService.DeleteByUser(&u.ID); err != nil {
-				return respServiceError(err)
+	err := svc.Services.WithTx(func(tx *persistence.DatabaseTx) error {
+		if u.Banned != ban {
+			if err := svc.Services.UserService(tx).UpdateBanned(&user.ID, u, ban); err != nil {
+				return err
 			}
-		} else if cntDel, err = svc.TheCommentService.MarkDeletedByUser(&user.ID, &u.ID); err != nil {
-			return respServiceError(err)
 		}
+
+		// When banning the user, all user's comments can also be deleted or purged
+		if ban && params.Body.DeleteComments {
+			var err error
+			if params.Body.PurgeComments {
+				if cntDel, err = svc.Services.CommentService(tx).DeleteByUser(&u.ID); err != nil {
+					return err
+				}
+			} else if cntDel, err = svc.Services.CommentService(tx).MarkDeletedByUser(&user.ID, &u.ID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return respServiceError(err)
 	}
 
 	// Succeeded
@@ -103,12 +110,18 @@ func UserDelete(params api_general.UserDeleteParams, user *data.User) middleware
 	}
 
 	// Delete the user, optionally deleting their comments
-	if cntDel, err := svc.TheUserService.DeleteUserByID(u, params.Body.DeleteComments, params.Body.PurgeComments); err != nil {
+	var cntDel int64
+	err := svc.Services.WithTx(func(tx *persistence.DatabaseTx) error {
+		var err error
+		cntDel, err = svc.Services.UserService(tx).DeleteUserByID(u, params.Body.DeleteComments, params.Body.PurgeComments)
+		return err
+	})
+	if err != nil {
 		return respServiceError(err)
-	} else {
-		// Succeeded
-		return api_general.NewUserDeleteOK().WithPayload(&api_general.UserDeleteOKBody{CountDeletedComments: cntDel})
 	}
+
+	// Succeeded
+	return api_general.NewUserDeleteOK().WithPayload(&api_general.UserDeleteOKBody{CountDeletedComments: cntDel})
 }
 
 func UserGet(params api_general.UserGetParams, user *data.User) middleware.Responder {
@@ -124,14 +137,14 @@ func UserGet(params api_general.UserGetParams, user *data.User) middleware.Respo
 	}
 
 	// Fetch user attributes
-	attr, err := svc.TheUserAttrService.GetAll(&u.ID)
+	attr, err := svc.Services.UserAttrService(nil).GetAll(&u.ID)
 	if err != nil {
 		return respServiceError(err)
 	}
 
 	// Fetch domains the current user has access to, and the corresponding domain users in relation to the user in
 	// question
-	ds, dus, err := svc.TheDomainService.ListByDomainUser(&u.ID, &user.ID, user.IsSuperuser, true, "", "", data.SortAsc, -1)
+	ds, dus, err := svc.Services.DomainService(nil).ListByDomainUser(&u.ID, &user.ID, user.IsSuperuser, true, "", "", data.SortAsc, -1)
 	if err != nil {
 		return respServiceError(err)
 	}
@@ -139,7 +152,7 @@ func UserGet(params api_general.UserGetParams, user *data.User) middleware.Respo
 	// Succeeded
 	return api_general.NewUserGetOK().
 		WithPayload(&api_general.UserGetOKBody{
-			Attributes:  exmodels.KeyValueMap(attr),
+			Attributes:  attr,
 			DomainUsers: data.SliceToDTOs(dus),
 			Domains:     data.SliceToDTOs(ds),
 			User:        u.ToDTO(),
@@ -153,7 +166,7 @@ func UserList(params api_general.UserListParams, user *data.User) middleware.Res
 	}
 
 	// Fetch pages the user has access to
-	us, err := svc.TheUserService.List(
+	us, err := svc.Services.UserService(nil).List(
 		swag.StringValue(params.Filter),
 		swag.StringValue(params.SortBy),
 		data.SortDirection(swag.BoolValue(params.SortDesc)),
@@ -180,7 +193,7 @@ func UserSessionList(params api_general.UserSessionListParams, user *data.User) 
 	}
 
 	// Fetch user sessions
-	uss, err := svc.TheUserService.ListUserSessions(userID, data.PageIndex(params.Page))
+	uss, err := svc.Services.UserService(nil).ListUserSessions(userID, data.PageIndex(params.Page))
 	if err != nil {
 		return respServiceError(err)
 	}
@@ -202,7 +215,10 @@ func UserSessionsExpire(params api_general.UserSessionsExpireParams, user *data.
 	}
 
 	// Expire user sessions
-	if err := svc.TheUserService.ExpireUserSessions(userID); err != nil {
+	err := svc.Services.WithTx(func(tx *persistence.DatabaseTx) error {
+		return svc.Services.UserService(tx).ExpireUserSessions(userID)
+	})
+	if err != nil {
 		return respServiceError(err)
 	}
 
@@ -225,7 +241,7 @@ func UserUnlock(params api_general.UserUnlockParams, user *data.User) middleware
 	// Don't bother if the user isn't locked
 	if u.IsLocked {
 		// Update the user
-		if err := svc.TheUserService.UpdateLoginLocked(u.WithLocked(false)); err != nil {
+		if err := svc.Services.UserService(nil).UpdateLoginLocked(u.WithLocked(false)); err != nil {
 			return respServiceError(err)
 		}
 	}
@@ -304,7 +320,7 @@ func UserUpdate(params api_general.UserUpdateParams, user *data.User) middleware
 		WithLangID(swag.StringValue(dto.LangID))
 
 	// Persist the user
-	if err := svc.TheUserService.Update(u); err != nil {
+	if err := svc.Services.UserService(nil).Update(u); err != nil {
 		return respServiceError(err)
 	}
 
@@ -321,7 +337,7 @@ func userGet(id strfmt.UUID) (*data.User, middleware.Responder) {
 	}
 
 	// Fetch the user
-	user, err := svc.TheUserService.FindUserByID(userID)
+	user, err := svc.Services.UserService(nil).FindUserByID(userID)
 	if err != nil {
 		return nil, respServiceError(err)
 	}

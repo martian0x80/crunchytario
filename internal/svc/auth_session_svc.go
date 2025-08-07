@@ -4,11 +4,9 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/google/uuid"
 	"gitlab.com/comentario/comentario/internal/data"
+	"gitlab.com/comentario/comentario/internal/persistence"
 	"time"
 )
-
-// TheAuthSessionService is a global AuthSessionService implementation
-var TheAuthSessionService AuthSessionService = &authSessionService{}
 
 // AuthSessionService is a service interface for dealing with AuthSession objects
 type AuthSessionService interface {
@@ -21,7 +19,7 @@ type AuthSessionService interface {
 //----------------------------------------------------------------------------------------------------------------------
 
 // authSessionService is a blueprint AuthSessionService implementation
-type authSessionService struct{}
+type authSessionService struct{ dbTxAware }
 
 func (svc *authSessionService) Create(sessData, host, token string) (*data.AuthSession, error) {
 	logger.Debugf("authSessionService.Create(%q, %q, %q)", sessData, host, token)
@@ -30,9 +28,8 @@ func (svc *authSessionService) Create(sessData, host, token string) (*data.AuthS
 	as := data.NewAuthSession(sessData, host, token)
 
 	// Persist the session
-	if err := db.ExecOne(db.Insert("cm_auth_sessions").Rows(as)); err != nil {
-		logger.Errorf("authSessionService.Create: ExecOne() failed: %v", err)
-		return nil, translateDBErrors(err)
+	if err := persistence.ExecOne(svc.dbx().Insert("cm_auth_sessions").Rows(as)); err != nil {
+		return nil, translateDBErrors("authSessionService.Create/Insert", err)
 	}
 
 	// Succeeded
@@ -44,14 +41,13 @@ func (svc *authSessionService) TakeByID(id *uuid.UUID) (*data.AuthSession, error
 
 	// Query and delete the session
 	var as data.AuthSession
-	b, err := db.Delete("cm_auth_sessions").
+	b, err := svc.dbx().Delete("cm_auth_sessions").
 		Where(goqu.C("id").Eq(id), goqu.C("ts_expires").Gt(time.Now().UTC())).
 		Returning("id", "token_value", "data", "host", "ts_created", "ts_expires").
 		Executor().
 		ScanStruct(&as)
 	if err != nil {
-		logger.Errorf("authSessionService.TakeByID: ScanStruct() failed: %v", err)
-		return nil, translateDBErrors(err)
+		return nil, translateDBErrors("authSessionService.TakeByID/ScanStruct", err)
 	} else if !b {
 		return nil, ErrNotFound
 	}

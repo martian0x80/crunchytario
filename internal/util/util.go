@@ -243,8 +243,8 @@ func HTMLTitleFromURL(u *url.URL) (string, error) {
 	}
 	defer LogError(resp.Body.Close, "HTMLTitleFromURL, resp.Body.Close()")
 
-	// Verify we're dealing with an HTML document
-	if !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/html") {
+	// Ignore irrelevant HTTP statuses and verify we're dealing with an HTML document
+	if resp.StatusCode < 200 || resp.StatusCode > 299 || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/html") {
 		return "", nil
 	}
 
@@ -259,16 +259,6 @@ func If[T any](cond bool, ifTrue, ifFalse T) T {
 		return ifTrue
 	}
 	return ifFalse
-}
-
-// IndexOfString returns the index of the given string in the slice, or -1 if it wasn't found
-func IndexOfString(s string, slice []string) int {
-	for i, e := range slice {
-		if s == e {
-			return i
-		}
-	}
-	return -1
 }
 
 // IsStrongPassword checks whether the provided password is a 'strong' one
@@ -523,6 +513,19 @@ func RequestReplacePath(req *http.Request, newPath string) *http.Request {
 	// Make sure no raw path leftover is stored
 	cr.URL.RawPath = ""
 	return cr
+}
+
+type ErrFunc = func() error
+
+// RunCheckErr runs the provided functions sequentially, stopping on the first non-nil error and returning it, or nil if
+// there's none
+func RunCheckErr(fs []ErrFunc) error {
+	for _, f := range fs {
+		if err := f(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // StripPort returns the provided hostname or IP address string with any port number part (':xxxx') removed

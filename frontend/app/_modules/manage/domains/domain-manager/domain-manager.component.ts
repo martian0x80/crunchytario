@@ -21,6 +21,8 @@ import { DomainUserRoleBadgeComponent } from '../../badges/domain-user-role-badg
 import { ListFooterComponent } from '../../../tools/list-footer/list-footer.component';
 import { SortPropertyComponent } from '../../sort-selector/sort-property/sort-property.component';
 import { LoaderDirective } from '../../../tools/_directives/loader.directive';
+import { LocalSettingService } from '../../../../_services/local-setting.service';
+import { SortableViewSettings } from '../../_models/view';
 
 @UntilDestroy()
 @Component({
@@ -60,7 +62,7 @@ export class DomainManagerComponent implements OnInit {
     /** Observable triggering a data load, while indicating whether a result reset is needed. */
     readonly load = new Subject<boolean>();
 
-    readonly sort = new Sort('host');
+    readonly sort = new Sort(['name', 'host', 'created', 'countComments', 'countViews'], 'host', false);
     readonly domainsLoading = new ProcessingStatus();
     readonly domainLoading = this.domainSelectorSvc.domainLoading;
     readonly Paths = Paths;
@@ -80,20 +82,23 @@ export class DomainManagerComponent implements OnInit {
         private readonly api: ApiGeneralService,
         private readonly domainSelectorSvc: DomainSelectorService,
         private readonly configSvc: ConfigService,
+        private readonly localSettingSvc: LocalSettingService,
     ) {
+        // Restore the view settings
+        localSettingSvc.load<SortableViewSettings>('domainManager').subscribe(s => s?.sort && (this.sort.asString = s.sort));
+
+        // Subscribe to domain selector changes
         this.domainSelectorSvc.domainMeta(true)
             .pipe(
                 untilDestroyed(this),
                 tap(meta => this.domainMeta = meta),
-                // Find out whether the user is allowed to add a domain: if the user isn't a superuser, check whether
-                // new owners are allowed
-                switchMap(() => this.domainMeta?.principal?.isSuperuser ?
+                // Find out whether the user is allowed to add a domain: if the user isn't a superuser and owns no
+                // domains yet, check whether new owners are allowed
+                switchMap(() => (this.domainMeta?.principal?.isSuperuser || this.domainMeta?.principal?.countDomainsOwned) ?
                     of(true) :
-                    this.configSvc.dynamicConfig.pipe(first(), map(dc => dc.get(InstanceConfigItemKey.operationNewOwnerEnabled).val))),
-                // If no new owner enabled, the user must already own at least one domain
-                switchMap(enabled => enabled ?
-                    of(true) :
-                    this.api.domainCount(true, false).pipe(map(count => count > 0))))
+                    this.configSvc.dynamicConfig.pipe(
+                        first(),
+                        map(dc => dc.get(InstanceConfigItemKey.operationNewOwnerEnabled).val as boolean))))
             .subscribe(canAdd => this.canAdd = canAdd);
     }
 
@@ -109,7 +114,7 @@ export class DomainManagerComponent implements OnInit {
                 // Trigger an initial load
                 of(undefined),
                 // Subscribe to sort changes
-                this.sort.changes.pipe(untilDestroyed(this)),
+                this.sort.changes,
                 // Subscribe to filter changes
                 this.filterForm.controls.filter.valueChanges.pipe(untilDestroyed(this), debounceTime(500), distinctUntilChanged()))
             .pipe(
@@ -157,6 +162,9 @@ export class DomainManagerComponent implements OnInit {
 
                 // Make a map of domain ID => domain users
                 r.domainUsers?.forEach(du => this.domainUsers.set(du.domainId!, du));
+
+                // Persist view settings
+                this.localSettingSvc.storeValue<SortableViewSettings>('domainManager', {sort: this.sort.asString});
             });
     }
 }

@@ -74,6 +74,7 @@ context('Config Manager', () => {
                 ['Max. number of items per page',           '25'],
                 ['Live update enabled',                     '✔'],
                 ['Page view statistics enabled',            '✔'],
+                ['Max. number of days in statistics',       '30'],
                 ['Available UI languages',                  Object.entries(UI_LANGUAGES).map(([k, v]) => k+v)],
                 ['Enabled extensions',                      ['Akismet', 'APILayer SpamChecker', 'Perspective']],
             ]);
@@ -142,6 +143,7 @@ context('Config Manager', () => {
                     ['New commenters must confirm their email',             ''],
                     ['New users must confirm their email',                  '✔'],
                     ['Enable registration of new users',                    '✔'],
+                    ['Show login dialog for unauthenticated users',         '✔'],
                     ['Enable commenter registration via external provider', '✔'],
                     ['Enable local commenter registration',                 '✔'],
                     ['Enable commenter registration via SSO',               '✔'],
@@ -191,6 +193,7 @@ context('Config Manager', () => {
             cy.get('@configEdit').find('#domain_defaults_markdown_images_enabled')    .should('be.checked')    .clickLabel().should('not.be.checked');
             cy.get('@configEdit').find('#domain_defaults_markdown_links_enabled')     .should('be.checked')    .clickLabel().should('not.be.checked');
             cy.get('@configEdit').find('#domain_defaults_markdown_tables_enabled')    .should('be.checked')    .clickLabel().should('not.be.checked');
+            cy.get('@configEdit').find('#domain_defaults_login_showForUnauth')        .should('be.checked')    .clickLabel().should('not.be.checked');
             cy.get('@configEdit').find('#domain_defaults_signup_enableLocal')         .should('be.checked')    .clickLabel().should('not.be.checked');
             cy.get('@configEdit').find('#domain_defaults_signup_enableFederated')     .should('be.checked')    .clickLabel().should('not.be.checked');
             cy.get('@configEdit').find('#domain_defaults_signup_enableSso')           .should('be.checked')    .clickLabel().should('not.be.checked');
@@ -216,6 +219,7 @@ context('Config Manager', () => {
                     ['New commenters must confirm their email',             '✔'],
                     ['New users must confirm their email',                  ''],
                     ['Enable registration of new users',                    ''],
+                    ['Show login dialog for unauthenticated users',         ''],
                     ['Enable commenter registration via external provider', ''],
                     ['Enable local commenter registration',                 '✔'],
                     ['Enable commenter registration via SSO',               ''],
@@ -249,6 +253,7 @@ context('Config Manager', () => {
                     ['New commenters must confirm their email',             '✔'],
                     ['New users must confirm their email',                  '✔'],
                     ['Enable registration of new users',                    '✔'],
+                    ['Show login dialog for unauthenticated users',         '✔'],
                     ['Enable commenter registration via external provider', '✔'],
                     ['Enable local commenter registration',                 '✔'],
                     ['Enable commenter registration via SSO',               '✔'],
@@ -289,6 +294,7 @@ context('Config Manager', () => {
                 [InstanceConfigKey.domainDefaultsMarkdownImagesEnabled]:    true,
                 [InstanceConfigKey.domainDefaultsMarkdownLinksEnabled]:     false,
                 [InstanceConfigKey.domainDefaultsMarkdownTablesEnabled]:    false,
+                [InstanceConfigKey.domainDefaultsShowLoginForUnauth]:       false,
                 [InstanceConfigKey.domainDefaultsLocalSignupEnabled]:       false,
                 [InstanceConfigKey.domainDefaultsFederatedSignupEnabled]:   false,
                 [InstanceConfigKey.domainDefaultsSsoSignupEnabled]:         false,
@@ -305,6 +311,7 @@ context('Config Manager', () => {
                     ['New commenters must confirm their email',             ''],
                     ['New users must confirm their email',                  ''],
                     ['Enable registration of new users',                    ''],
+                    ['Show login dialog for unauthenticated users',         ''],
                     ['Enable commenter registration via external provider', ''],
                     ['Enable local commenter registration',                 ''],
                     ['Enable commenter registration via SSO',               ''],

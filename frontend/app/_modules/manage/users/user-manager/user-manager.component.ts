@@ -20,6 +20,9 @@ import { CurrentUserBadgeComponent } from '../../badges/current-user-badge/curre
 import { IdentityProviderIconComponent } from '../../../tools/identity-provider-icon/identity-provider-icon.component';
 import { ListFooterComponent } from '../../../tools/list-footer/list-footer.component';
 import { LoaderDirective } from '../../../tools/_directives/loader.directive';
+import { DecimalPipe } from '@angular/common';
+import { LocalSettingService } from '../../../../_services/local-setting.service';
+import { SortableViewSettings } from '../../_models/view';
 
 @UntilDestroy()
 @Component({
@@ -39,6 +42,7 @@ import { LoaderDirective } from '../../../tools/_directives/loader.directive';
         IdentityProviderIconComponent,
         ListFooterComponent,
         LoaderDirective,
+        DecimalPipe,
     ],
 })
 export class UserManagerComponent implements OnInit {
@@ -52,7 +56,7 @@ export class UserManagerComponent implements OnInit {
     /** Observable triggering a data load, while indicating whether a result reset is needed. */
     readonly load = new Subject<boolean>();
 
-    readonly sort = new Sort('email');
+    readonly sort = new Sort(['email', 'name', 'created', 'federatedIdP'], 'email', false);
     readonly usersLoading = new ProcessingStatus();
     readonly filterForm = this.fb.nonNullable.group({
         filter: '',
@@ -69,12 +73,16 @@ export class UserManagerComponent implements OnInit {
         private readonly fb: FormBuilder,
         private readonly api: ApiGeneralService,
         private readonly configSvc: ConfigService,
-    ) {}
+        private readonly localSettingSvc: LocalSettingService,
+    ) {
+        // Restore the view settings
+        localSettingSvc.load<SortableViewSettings>('userManager').subscribe(s => s?.sort && (this.sort.asString = s.sort));
+    }
 
     ngOnInit(): void {
         // Subscribe to sort/filter changes
         merge(
-                this.sort.changes.pipe(untilDestroyed(this)),
+                this.sort.changes,
                 this.filterForm.controls.filter.valueChanges
                     .pipe(untilDestroyed(this), debounceTime(500), distinctUntilChanged()))
             .pipe(
@@ -100,6 +108,9 @@ export class UserManagerComponent implements OnInit {
             .subscribe(r => {
                 this.users = [...this.users || [], ...r.users || []];
                 this.canLoadMore = this.configSvc.canLoadMore(r.users);
+
+                // Persist view settings
+                this.localSettingSvc.storeValue<SortableViewSettings>('userManager', {sort: this.sort.asString});
             });
 
         // Trigger an initial load

@@ -1,13 +1,12 @@
-import { Directive, Input } from '@angular/core';
+import { Directive, input } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { MockProvider } from 'ng-mocks';
 import { DomainMeta, DomainSelectorService } from '../_modules/manage/_services/domain-selector.service';
 import { ProcessingStatus } from './processing-status';
-import { AuthService } from '../_services/auth.service';
-import { Principal } from '../../generated-api';
 import { HighlightLoader } from 'ngx-highlightjs';
 import { ConfigService } from '../_services/config.service';
 import { DynamicConfig } from '../_models/config';
+import { LocalSettingService } from '../_services/local-setting.service';
 
 export const mockConfigService = () => MockProvider(
     ConfigService, {
@@ -27,6 +26,7 @@ export const mockConfigService = () => MockProvider(
             uiLanguages:          [{id: 'en', nameEnglish: 'English', nameNative: 'English', isFrontendLanguage: true}],
             liveUpdateEnabled:    true,
             pageViewStatsEnabled: true,
+            pageViewStatsMaxDays: 42,
         },
         pluginConfig: {
             plugins: [],
@@ -44,10 +44,9 @@ export const mockDomainSelector = (domainEmitter?: Observable<DomainMeta>) => Mo
         domainLoading: new ProcessingStatus(),
     });
 
-export const mockAuthService = (principalEmitter?: Observable<Principal | undefined>) => MockProvider(
-    AuthService, {
-        principal: principalEmitter || of(undefined),
-    });
+export const mockLocalSettingService = () => MockProvider(
+    LocalSettingService,
+    {load: () => of(undefined)});
 
 @Directive({
     // eslint-disable-next-line @angular-eslint/directive-selector
@@ -55,11 +54,8 @@ export const mockAuthService = (principalEmitter?: Observable<Principal | undefi
     standalone: true,
 })
 export class MockHighlightDirective {
-    @Input()
-    highlight?: string;
-
-    @Input()
-    language?: string;
+    readonly highlight = input<string>();
+    readonly language = input<string>();
 }
 
 export const mockHighlightLoaderStub = () =>

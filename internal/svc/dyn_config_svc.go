@@ -6,19 +6,17 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/google/uuid"
 	"gitlab.com/comentario/comentario/internal/data"
+	"gitlab.com/comentario/comentario/internal/persistence"
 	"sync"
 	"time"
 )
-
-// TheDynConfigService is a global DynConfigService implementation
-var TheDynConfigService DynConfigService = newDynConfigService()
 
 // DynConfigService is a service interface for dealing with dynamic instance configuration
 type DynConfigService interface {
 	// Get returns a configuration item by its key
 	Get(key data.DynConfigItemKey) (*data.DynConfigItem, error)
 	// GetAll returns all available configuration items
-	GetAll() (map[data.DynConfigItemKey]*data.DynConfigItem, error)
+	GetAll() (data.DynConfigMap, error)
 	// GetBool returns the bool value of a configuration item by its key, or the default value on error
 	GetBool(key data.DynConfigItemKey) bool
 	// GetInt returns the int value of a configuration item by its key, or the default value on error
@@ -45,9 +43,9 @@ var errConfigUninitialised = errors.New("config is not initialised")
 
 // ConfigStore is a transient, concurrent store for DynConfigItem's
 type ConfigStore struct {
-	mu       sync.RWMutex                                                  // Config item mutex
-	items    map[data.DynConfigItemKey]*data.DynConfigItem                 // Config items
-	defaults func() (map[data.DynConfigItemKey]*data.DynConfigItem, error) // Function returning a new, fresh map of items, all with their default values
+	mu       sync.RWMutex                      // Config item mutex
+	items    data.DynConfigMap                 // Config items
+	defaults func() (data.DynConfigMap, error) // Function returning a new, fresh map of items, all with their default values
 }
 
 func (cs *ConfigStore) Get(key data.DynConfigItemKey) (*data.DynConfigItem, error) {
@@ -56,7 +54,7 @@ func (cs *ConfigStore) Get(key data.DynConfigItemKey) (*data.DynConfigItem, erro
 	return cs.get(key)
 }
 
-func (cs *ConfigStore) GetAll() (map[data.DynConfigItemKey]*data.DynConfigItem, error) {
+func (cs *ConfigStore) GetAll() (data.DynConfigMap, error) {
 	// Prevent concurrent write access
 	cs.mu.RLock()
 	defer cs.mu.RUnlock()
@@ -66,13 +64,8 @@ func (cs *ConfigStore) GetAll() (map[data.DynConfigItemKey]*data.DynConfigItem, 
 		return nil, errConfigUninitialised
 	}
 
-	// Make an (immutable) copy of the items
-	items := make(map[data.DynConfigItemKey]*data.DynConfigItem, len(cs.items))
-	for k, v := range cs.items {
-		vCopy := *v
-		items[k] = &vCopy
-	}
-	return items, nil
+	// Return a (immutable) clone of the items
+	return cs.items.Clone(), nil
 }
 
 // Reset all configuration data to instance defaults
@@ -115,7 +108,7 @@ func (cs *ConfigStore) Update(curUserID *uuid.UUID, vals map[data.DynConfigItemK
 }
 
 // dbLoad loads the config from the given table, with an optional key filter
-func (cs *ConfigStore) dbLoad(tableName string, extraKeyCols goqu.Ex) error {
+func (cs *ConfigStore) dbLoad(dbx persistence.DBX, tableName string, extraKeyCols goqu.Ex) error {
 	// Prevent concurrent access
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
@@ -129,9 +122,8 @@ func (cs *ConfigStore) dbLoad(tableName string, extraKeyCols goqu.Ex) error {
 
 	// Query the data
 	var dbRecs []dynConfigRecord
-	if err := db.From(goqu.T(tableName)).Where(extraKeyCols).ScanStructs(&dbRecs); err != nil {
-		logger.Errorf("ConfigStore.Load: ScanStructs() failed: %v", err)
-		return err
+	if err := dbx.From(goqu.T(tableName)).Where(extraKeyCols).ScanStructs(&dbRecs); err != nil {
+		return translateDBErrors("ConfigStore.Load/ScanStructs", err)
 	}
 
 	// Process the fetched items
@@ -149,7 +141,7 @@ func (cs *ConfigStore) dbLoad(tableName string, extraKeyCols goqu.Ex) error {
 }
 
 // dbSave writes the config into the given table, with an optional key filter
-func (cs *ConfigStore) dbSave(tableName string, extraKeyCols goqu.Ex) error {
+func (cs *ConfigStore) dbSave(dbx persistence.DBX, tableName string, extraKeyCols goqu.Ex) error {
 	// Prevent concurrent access
 	cs.mu.RLock()
 	defer cs.mu.RUnlock()
@@ -186,11 +178,11 @@ func (cs *ConfigStore) dbSave(tableName string, extraKeyCols goqu.Ex) error {
 	}
 
 	// Remove and reinsert all items in scope
-	if _, err := db.Delete(tableName).Where(extraKeyCols).Executor().Exec(); err != nil {
-		return translateDBErrors(err)
+	if _, err := dbx.Delete(tableName).Where(extraKeyCols).Executor().Exec(); err != nil {
+		return translateDBErrors("ConfigStore.dbSave/Exec[delete]", err)
 	}
-	if _, err := db.Insert(tableName).Rows(rows...).Executor().Exec(); err != nil {
-		return translateDBErrors(err)
+	if _, err := dbx.Insert(tableName).Rows(rows...).Executor().Exec(); err != nil {
+		return translateDBErrors("ConfigStore.dbSave/Exec[insert]", err)
 	}
 
 	// Succeeded
@@ -217,21 +209,22 @@ func (cs *ConfigStore) get(key data.DynConfigItemKey) (*data.DynConfigItem, erro
 // instanceConfigStore is an extension to ConfigStore that stores global dynamic config
 type instanceConfigStore struct {
 	ConfigStore
+	dbx persistence.DBX
 }
 
 func (cs *instanceConfigStore) Load() error {
-	return cs.dbLoad("cm_configuration", goqu.Ex{})
+	return cs.dbLoad(cs.dbx, "cm_configuration", goqu.Ex{})
 }
 
 func (cs *instanceConfigStore) Save() error {
-	return cs.dbSave("cm_configuration", goqu.Ex{})
+	return cs.dbSave(cs.dbx, "cm_configuration", goqu.Ex{})
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 
-// getInstanceDefaults returns a clone of the default config
-func getInstanceDefaults() (map[data.DynConfigItemKey]*data.DynConfigItem, error) {
-	m := make(map[data.DynConfigItemKey]*data.DynConfigItem, len(data.DefaultDynInstanceConfig))
+// getInstanceDefaults returns a clone of the default config, with all values set to the default
+func getInstanceDefaults() (data.DynConfigMap, error) {
+	m := make(data.DynConfigMap, len(data.DefaultDynInstanceConfig))
 	for key, item := range data.DefaultDynInstanceConfig {
 		m[key] = &data.DynConfigItem{
 			Value:        item.DefaultValue,
@@ -246,9 +239,9 @@ func getInstanceDefaults() (map[data.DynConfigItemKey]*data.DynConfigItem, error
 }
 
 // newDynConfigService creates a new DynConfigService
-func newDynConfigService() *dynConfigService {
+func newDynConfigService(dbx persistence.DBX) *dynConfigService {
 	return &dynConfigService{
-		s: &instanceConfigStore{ConfigStore{defaults: getInstanceDefaults}},
+		s: &instanceConfigStore{ConfigStore: ConfigStore{defaults: getInstanceDefaults}, dbx: dbx},
 	}
 }
 
@@ -261,7 +254,7 @@ func (svc *dynConfigService) Get(key data.DynConfigItemKey) (*data.DynConfigItem
 	return svc.s.Get(key)
 }
 
-func (svc *dynConfigService) GetAll() (map[data.DynConfigItemKey]*data.DynConfigItem, error) {
+func (svc *dynConfigService) GetAll() (data.DynConfigMap, error) {
 	logger.Debug("dynConfigService.GetAll()")
 	return svc.s.GetAll()
 }
@@ -314,7 +307,7 @@ func (svc *dynConfigService) Reset() error {
 	}
 
 	// Flush any cached domain config to enforce any new defaults
-	TheDomainConfigService.ResetCache()
+	Services.DomainConfigService(nil).ResetCache()
 
 	// Succeeded
 	return nil
@@ -334,7 +327,7 @@ func (svc *dynConfigService) Update(curUserID *uuid.UUID, vals map[data.DynConfi
 	}
 
 	// Flush any cached domain config to enforce any new defaults
-	TheDomainConfigService.ResetCache()
+	Services.DomainConfigService(nil).ResetCache()
 
 	// Succeeded
 	return nil

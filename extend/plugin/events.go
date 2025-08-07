@@ -3,24 +3,34 @@
 
 package plugin
 
+import "gitlab.com/comentario/comentario/extend/intf"
+
 // UserPayload is implemented by events carrying a user
 type UserPayload interface {
 	// User payload
-	User() *User
+	User() *intf.User
 	// SetUser updates the user payload
-	SetUser(*User)
+	SetUser(*intf.User)
 }
+
+// ActivateEvent signals the plugin Comentario has readied all resources and is about to start serving the API.
+// The plugin may want to start background processes that make use of resources such as database.
+type ActivateEvent struct{}
+
+// ShutdownEvent notifies the plugin it has to shut down, by e.g. freeing up resources, closing files etc. Fired when
+// the server is about to shut down
+type ShutdownEvent struct{}
 
 // UserEvent is an event related to user, which implements UserPayload
 type UserEvent struct {
-	user *User
+	user *intf.User
 }
 
-func (e *UserEvent) User() *User {
+func (e *UserEvent) User() *intf.User {
 	return e.user
 }
 
-func (e *UserEvent) SetUser(u *User) {
+func (e *UserEvent) SetUser(u *intf.User) {
 	e.user = u
 }
 
@@ -46,9 +56,11 @@ type UserBanStatusEvent struct {
 	UserUpdateEvent
 }
 
-// UserBecameOwnerEvent is fired when a user receives their first Owner role (e.g., registers their first domain)
-type UserBecameOwnerEvent struct {
+// UserBecomesOwnerEvent is fired when a user is about to become an owner of a domain, that is, receives the Owner role
+// (e.g., registers a new domain)
+type UserBecomesOwnerEvent struct {
 	UserUpdateEvent
+	CountOwnedDomains int // Number of domains the user already owns
 }
 
 // UserConfirmedEvent is fired when a user confirms their email

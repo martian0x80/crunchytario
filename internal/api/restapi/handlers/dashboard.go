@@ -11,27 +11,28 @@ import (
 
 func DashboardDailyStats(params api_general.DashboardDailyStatsParams, user *data.User) middleware.Responder {
 	// Extract and parse the parameters
-	numDays := int(swag.Uint64Value(params.Days))
+	numDays := swag.Uint64Value(params.Days)
 	domainID, r := parseUUIDPtr(params.Domain)
 	if r != nil {
 		return r
 	}
 
 	// Collect stats
+	stSvc := svc.Services.StatsService(nil)
 	var counts []uint64
 	var err error
 	switch params.Metric {
 	case "comments":
-		counts, err = svc.TheStatsService.GetDailyCommentCounts(user.IsSuperuser, &user.ID, domainID, numDays)
+		counts, err = stSvc.GetDailyCommentCounts(user.IsSuperuser, &user.ID, domainID, numDays)
 
 	case "domainUsers":
-		counts, err = svc.TheStatsService.GetDailyDomainUserCounts(user.IsSuperuser, &user.ID, domainID, numDays)
+		counts, err = stSvc.GetDailyDomainUserCounts(user.IsSuperuser, &user.ID, domainID, numDays)
 
 	case "domainPages":
-		counts, err = svc.TheStatsService.GetDailyDomainPageCounts(user.IsSuperuser, &user.ID, domainID, numDays)
+		counts, err = stSvc.GetDailyDomainPageCounts(user.IsSuperuser, &user.ID, domainID, numDays)
 
 	case "views":
-		counts, err = svc.TheStatsService.GetDailyViewCounts(user.IsSuperuser, &user.ID, domainID, numDays)
+		counts, err = stSvc.GetDailyViewCounts(user.IsSuperuser, &user.ID, domainID, numDays)
 
 	default:
 		return respBadRequest(exmodels.ErrorInvalidPropertyValue.WithDetails(params.Metric))
@@ -48,20 +49,22 @@ func DashboardDailyStats(params api_general.DashboardDailyStatsParams, user *dat
 
 func DashboardPageStats(params api_general.DashboardPageStatsParams, user *data.User) middleware.Responder {
 	// Extract and parse the parameters
-	numDays := int(swag.Uint64Value(params.Days))
+	numDays := swag.Uint64Value(params.Days)
 	domainID, r := parseUUIDPtr(params.Domain)
 	if r != nil {
 		return r
 	}
 
+	stSvc := svc.Services.StatsService(nil)
+
 	// Collect view stats
-	vc, err := svc.TheStatsService.GetTopPages(user.IsSuperuser, "views", &user.ID, domainID, numDays, 5)
+	vc, err := stSvc.GetTopPages(user.IsSuperuser, "views", &user.ID, domainID, numDays, 5)
 	if err != nil {
 		return respServiceError(err)
 	}
 
 	// Collect comment stats
-	cc, err := svc.TheStatsService.GetTopPages(user.IsSuperuser, "comments", &user.ID, domainID, numDays, 5)
+	cc, err := stSvc.GetTopPages(user.IsSuperuser, "comments", &user.ID, domainID, numDays, 5)
 	if err != nil {
 		return respServiceError(err)
 	}
@@ -75,7 +78,7 @@ func DashboardPageStats(params api_general.DashboardPageStatsParams, user *data.
 
 func DashboardPageViewStats(params api_general.DashboardPageViewStatsParams, user *data.User) middleware.Responder {
 	// Extract and parse the parameters
-	numDays := int(swag.Uint64Value(params.Days))
+	numDays := swag.Uint64Value(params.Days)
 	domainID, r := parseUUIDPtr(params.Domain)
 	if r != nil {
 		return r
@@ -99,7 +102,7 @@ func DashboardPageViewStats(params api_general.DashboardPageViewStatsParams, use
 	}
 
 	// Collect stats
-	stats, err := svc.TheStatsService.GetViewStats(user.IsSuperuser, dim, &user.ID, domainID, numDays)
+	stats, err := svc.Services.StatsService(nil).GetViewStats(user.IsSuperuser, dim, &user.ID, domainID, numDays)
 	if err != nil {
 		return respServiceError(err)
 	}
@@ -110,7 +113,7 @@ func DashboardPageViewStats(params api_general.DashboardPageViewStatsParams, use
 
 func DashboardTotals(_ api_general.DashboardTotalsParams, user *data.User) middleware.Responder {
 	// Query the data
-	totals, err := svc.TheStatsService.GetTotals(user)
+	totals, err := svc.Services.StatsService(nil).GetTotals(user)
 	if err != nil {
 		return respServiceError(err)
 	}

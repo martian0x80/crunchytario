@@ -1,26 +1,28 @@
 package svc
 
 import (
+	"container/list"
 	"database/sql"
 	"github.com/avct/uasurfer"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/google/uuid"
 	"gitlab.com/comentario/comentario/internal/config"
 	"gitlab.com/comentario/comentario/internal/data"
+	"gitlab.com/comentario/comentario/internal/persistence"
 	"gitlab.com/comentario/comentario/internal/util"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
-
-// ThePageService is a global PageService implementation
-var ThePageService PageService = &pageService{}
 
 // PageService is a service interface for dealing with pages
 type PageService interface {
 	// CommentCounts returns a map of comment counts by page path, for the specified host and multiple paths
 	CommentCounts(domainID *uuid.UUID, paths []string) (map[string]int, error)
+	// Delete the page with the given ID, including dependent objects
+	Delete(pageID *uuid.UUID) error
 	// FetchUpdatePageTitle fetches and updates the title of the provided page based on its URL, returning if there was
 	// any change
 	FetchUpdatePageTitle(domain *data.Domain, page *data.DomainPage) (bool, error)
@@ -41,7 +43,7 @@ type PageService interface {
 	//   - dir is the sort direction.
 	//   - pageIndex is the page index, if negative, no pagination is applied.
 	ListByDomainUser(userID, domainID *uuid.UUID, superuser bool, filter, sortBy string, dir data.SortDirection, pageIndex int) ([]*data.DomainPage, error)
-	// Update updates the page's by its ID
+	// Update updates the page by its ID
 	Update(page *data.DomainPage) error
 	// UpsertByDomainPath queries a page, inserting a new page database record if necessary, optionally registering a
 	// new pageview (if req is not nil), returning whether the page was added. title is an optional page title, if not
@@ -49,10 +51,16 @@ type PageService interface {
 	UpsertByDomainPath(domain *data.Domain, path, title string, req *http.Request) (*data.DomainPage, bool, error)
 }
 
+// PageTitleFetcher is a service for background page title fetching
+type PageTitleFetcher interface {
+	// Enqueue adds a request to the queue
+	Enqueue(domain *data.Domain, page *data.DomainPage)
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 
 // pageService is a blueprint PageService implementation
-type pageService struct{}
+type pageService struct{ dbTxAware }
 
 func (svc *pageService) CommentCounts(domainID *uuid.UUID, paths []string) (map[string]int, error) {
 	logger.Debugf("pageService.CommentCounts(%s, [%d items])", domainID, len(paths))
@@ -62,9 +70,8 @@ func (svc *pageService) CommentCounts(domainID *uuid.UUID, paths []string) (map[
 		Path  string `db:"path"`
 		Count int    `db:"count_comments"`
 	}
-	if err := db.From("cm_domain_pages").Where(goqu.Ex{"domain_id": domainID}, goqu.I("path").In(paths)).ScanStructs(&dbRecs); err != nil {
-		logger.Errorf("pageService.CommentCounts: ScanStructs() failed: %v", err)
-		return nil, translateDBErrors(err)
+	if err := svc.dbx().From("cm_domain_pages").Where(goqu.Ex{"domain_id": domainID}, goqu.I("path").In(paths)).ScanStructs(&dbRecs); err != nil {
+		return nil, translateDBErrors("pageService.CommentCounts/ScanStructs", err)
 	}
 
 	// Convert the slice into a map
@@ -75,6 +82,19 @@ func (svc *pageService) CommentCounts(domainID *uuid.UUID, paths []string) (map[
 
 	// Succeeded
 	return res, nil
+}
+
+func (svc *pageService) Delete(pageID *uuid.UUID) error {
+	logger.Debugf("pageService.Delete(%s)", pageID)
+
+	// Delete the page record
+	err := persistence.ExecOne(svc.dbx().Delete("cm_domain_pages").Where(goqu.Ex{"id": pageID}))
+	if err != nil {
+		return translateDBErrors("pageService.Delete/Delete", err)
+	}
+
+	// Succeeded
+	return nil
 }
 
 func (svc *pageService) FetchUpdatePageTitle(domain *data.Domain, page *data.DomainPage) (bool, error) {
@@ -95,17 +115,16 @@ func (svc *pageService) FetchUpdatePageTitle(domain *data.Domain, page *data.Dom
 		title = u.String()
 	}
 
-	// Make sure the title doesn't exceed the size of the database field
-	title = util.TruncateStr(title, data.MaxPageTitleLength)
+	oldTitle := page.Title
+	page.WithTitle(title) // Takes care of title truncation
 
 	// Check if there's a change needed
-	if page.Title == title {
+	if page.Title == oldTitle {
 		return false, nil
 	}
 
 	// Update the page in the database
-	if err := db.ExecOne(db.Update("cm_domain_pages").Set(goqu.Record{"title": title}).Where(goqu.Ex{"id": &page.ID})); err != nil {
-		logger.Errorf("pageService.FetchUpdatePageTitle(): ExecOne() failed: %v", err)
+	if err := svc.Update(page); err != nil {
 		return false, err
 	}
 
@@ -118,9 +137,8 @@ func (svc *pageService) FindByDomainPath(domainID *uuid.UUID, path string) (*dat
 
 	// Query a page row
 	var p data.DomainPage
-	if b, err := db.From("cm_domain_pages").Where(goqu.Ex{"domain_id": domainID, "path": path}).ScanStruct(&p); err != nil {
-		logger.Errorf("pageService.FindByDomainPath: ScanStruct() failed: %v", err)
-		return nil, translateDBErrors(err)
+	if b, err := svc.dbx().From("cm_domain_pages").Where(goqu.Ex{"domain_id": domainID, "path": path}).ScanStruct(&p); err != nil {
+		return nil, translateDBErrors("pageService.FindByDomainPath/ScanStruct", err)
 	} else if !b {
 		return nil, ErrNotFound
 	}
@@ -134,9 +152,8 @@ func (svc *pageService) FindByID(id *uuid.UUID) (*data.DomainPage, error) {
 
 	// Query a page row
 	var p data.DomainPage
-	if b, err := db.From("cm_domain_pages").Where(goqu.Ex{"id": id}).ScanStruct(&p); err != nil {
-		logger.Errorf("pageService.FindByID: Scan() failed: %v", err)
-		return nil, translateDBErrors(err)
+	if b, err := svc.dbx().From("cm_domain_pages").Where(goqu.Ex{"id": id}).ScanStruct(&p); err != nil {
+		return nil, translateDBErrors("pageService.FindByID/Scan", err)
 	} else if !b {
 		return nil, ErrNotFound
 	}
@@ -149,16 +166,15 @@ func (svc *pageService) IncrementCounts(pageID *uuid.UUID, incComments, incViews
 	logger.Debugf("pageService.IncrementCounts(%s, %d, %d)", pageID, incComments, incViews)
 
 	// Update the page record
-	if err := db.ExecOne(
-		db.Update("cm_domain_pages").
+	err := persistence.ExecOne(
+		svc.dbx().Update("cm_domain_pages").
 			Set(goqu.Record{
 				"count_comments": goqu.L("? + ?", goqu.I("count_comments"), incComments),
 				"count_views":    goqu.L("? + ?", goqu.I("count_views"), incViews),
 			}).
-			Where(goqu.Ex{"id": pageID}),
-	); err != nil {
-		logger.Errorf("pageService.IncrementCounts: ExecOne() failed: %v", err)
-		return translateDBErrors(err)
+			Where(goqu.Ex{"id": pageID}))
+	if err != nil {
+		return translateDBErrors("pageService.IncrementCounts/Update", err)
 	}
 
 	// Succeeded
@@ -169,9 +185,8 @@ func (svc *pageService) ListByDomain(domainID *uuid.UUID) ([]*data.DomainPage, e
 	logger.Debugf("pageService.ListByDomain(%s)", domainID)
 
 	var ps []*data.DomainPage
-	if err := db.From("cm_domain_pages").Where(goqu.Ex{"domain_id": domainID}).ScanStructs(&ps); err != nil {
-		logger.Errorf("pageService.ListByDomain: ScanStructs() failed: %v", err)
-		return nil, translateDBErrors(err)
+	if err := svc.dbx().From("cm_domain_pages").Where(goqu.Ex{"domain_id": domainID}).ScanStructs(&ps); err != nil {
+		return nil, translateDBErrors("pageService.ListByDomain/ScanStructs", err)
 	}
 
 	// Succeeded
@@ -182,7 +197,7 @@ func (svc *pageService) ListByDomainUser(userID, domainID *uuid.UUID, superuser 
 	logger.Debugf("pageService.ListByDomainUser(%s, %s, %v, '%s', '%s', %s, %d)", userID, domainID, superuser, filter, sortBy, dir, pageIndex)
 
 	// Prepare a statement
-	q := db.From(goqu.T("cm_domain_pages").As("p")).
+	q := svc.dbx().From(goqu.T("cm_domain_pages").As("p")).
 		Select("p.*").
 		Join(goqu.T("cm_domains").As("d"), goqu.On(goqu.Ex{"d.id": goqu.I("p.domain_id")})).
 		Where(goqu.Ex{"d.id": domainID})
@@ -207,7 +222,7 @@ func (svc *pageService) ListByDomainUser(userID, domainID *uuid.UUID, superuser 
 					goqu.L(
 						// Work around extra parens not understood by SQLite: https://github.com/doug-martin/goqu/issues/204
 						"exists ?",
-						db.From(goqu.T("cm_comments").As("c")).
+						svc.dbx().From(goqu.T("cm_comments").As("c")).
 							Where(goqu.Ex{"c.page_id": goqu.I("p.id"), "c.user_created": userID})),
 				))
 	}
@@ -249,8 +264,7 @@ func (svc *pageService) ListByDomainUser(userID, domainID *uuid.UUID, superuser 
 		IsOwner sql.NullBool `db:"is_owner"`
 	}
 	if err := q.ScanStructs(&dbRecs); err != nil {
-		logger.Errorf("pageService.ListByDomainUser: ScanStructs() failed: %v", err)
-		return nil, translateDBErrors(err)
+		return nil, translateDBErrors("pageService.ListByDomainUser/ScanStructs", err)
 	}
 
 	// Convert the page list, applying the current user's authorisations
@@ -267,9 +281,9 @@ func (svc *pageService) Update(page *data.DomainPage) error {
 	logger.Debugf("pageService.Update(%#v)", page)
 
 	// Update the page record
-	if err := db.ExecOne(db.Update("cm_domain_pages").Set(page).Where(goqu.Ex{"id": &page.ID})); err != nil {
-		logger.Errorf("pageService.Update: ExecOne() failed: %v", err)
-		return translateDBErrors(err)
+	err := persistence.ExecOne(svc.dbx().Update("cm_domain_pages").Set(page).Where(goqu.Ex{"id": &page.ID}))
+	if err != nil {
+		return translateDBErrors("pageService.Update/Update", err)
 	}
 
 	// Succeeded
@@ -280,26 +294,23 @@ func (svc *pageService) UpsertByDomainPath(domain *data.Domain, path, title stri
 	logger.Debugf("pageService.UpsertByDomainPath(%#v, %q, %q, ...)", domain, path, title)
 
 	// Try to insert a page, querying the resulting page
-	pOrig := data.DomainPage{
-		ID:            uuid.New(),
-		DomainID:      domain.ID,
-		Path:          path,
-		Title:         util.TruncateStr(title, data.MaxPageTitleLength), // Make sure the title doesn't exceed the size of the database field
-		IsReadonly:    false,
-		CreatedTime:   time.Now().UTC(),
-		CountComments: 0,
-		CountViews:    util.If(req != nil, int64(1), 0),
+	pOrig := &data.DomainPage{
+		ID:          uuid.New(),
+		DomainID:    domain.ID,
+		Path:        path,
+		CreatedTime: time.Now().UTC(),
+		CountViews:  util.If(req != nil, int64(1), 0),
 	}
+	pOrig.WithTitle(title) // Takes care of title truncation
 	var pResult data.DomainPage
-	b, err := db.Insert(goqu.T("cm_domain_pages").As("p")).
-		Rows(&pOrig).
+	b, err := svc.dbx().Insert(goqu.T("cm_domain_pages").As("p")).
+		Rows(pOrig).
 		OnConflict(goqu.DoUpdate("domain_id, path", goqu.C("count_views").Set(goqu.L("p.count_views + ?", pOrig.CountViews)))).
 		Returning(&pResult).
 		Executor().
 		ScanStruct(&pResult)
 	if err != nil {
-		logger.Errorf("pageService.UpsertByDomainPath: ScanStruct() failed: %v", err)
-		return nil, false, translateDBErrors(err)
+		return nil, false, translateDBErrors("pageService.UpsertByDomainPath/ScanStruct", err)
 	} else if !b {
 		return nil, false, ErrNotFound
 	}
@@ -311,7 +322,7 @@ func (svc *pageService) UpsertByDomainPath(domain *data.Domain, path, title stri
 
 		// If no title was provided, fetch it in the background, ignoring possible errors
 		if title == "" {
-			go func() { _, _ = svc.FetchUpdatePageTitle(domain, &pResult) }()
+			Services.PageTitleFetcher().Enqueue(domain, &pResult)
 		}
 	}
 
@@ -347,7 +358,77 @@ func (svc *pageService) insertPageView(pageID *uuid.UUID, req *http.Request) {
 		OSVersion:      util.FormatVersion(&ua.OS.Version),
 		Device:         ua.DeviceType.StringTrimPrefix(),
 	}
-	if err := db.ExecOne(db.Insert("cm_domain_page_views").Rows(r)); err != nil {
-		logger.Errorf("pageService.insertPageView: ExecOne() failed: %v", err)
+	if err := persistence.ExecOne(svc.dbx().Insert("cm_domain_page_views").Rows(r)); err != nil {
+		_ = translateDBErrors("pageService.insertPageView/Insert", err)
+	}
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+// newPageTitleFetcher creates a new PageTitleFetcher instance
+func newPageTitleFetcher() PageTitleFetcher {
+	p := &pageTitleFetcher{
+		incoming: make(chan bool),
+	}
+	go p.run()
+	return p
+}
+
+// pageTitleFetcher is an implementation of PageTitleFetcher
+type pageTitleFetcher struct {
+	mu       sync.Mutex
+	queue    list.List
+	incoming chan bool
+}
+
+// pageTitleRequest represents page metadata for fetching its title
+type pageTitleRequest struct {
+	*data.Domain
+	*data.DomainPage
+}
+
+func (p *pageTitleFetcher) Enqueue(domain *data.Domain, page *data.DomainPage) {
+	logger.Debugf("pageTitleFetcher.Enqueue(%#v, %#v)", domain, page)
+
+	// Enqueue the request
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.queue.PushBack(&pageTitleRequest{domain, page})
+
+	// Ping the fetcher, non-blocking
+	select {
+	case p.incoming <- true:
+	default:
+	}
+}
+
+// run continuously processes the queue
+func (p *pageTitleFetcher) run() {
+	logger.Debug("Starting pageTitleFetcher")
+
+	// Loop until there are no more requests
+	for {
+		// Fetch the first request
+		var req *pageTitleRequest
+		p.mu.Lock()
+		if el := p.queue.Front(); el != nil {
+			req = p.queue.Remove(el).(*pageTitleRequest)
+		} else {
+			// The queue is empty, clear the incoming flag, non-blocking
+			select {
+			case <-p.incoming:
+			default:
+			}
+		}
+		p.mu.Unlock()
+
+		// If there's anything to process, execute an page title update
+		if req != nil {
+			// We intentionally run this in a non-transactional context, since it's a background operation
+			_, _ = Services.PageService(nil).FetchUpdatePageTitle(req.Domain, req.DomainPage)
+		} else {
+			// The queue was empty, pause until we get an incoming request
+			<-p.incoming
+		}
 	}
 }
