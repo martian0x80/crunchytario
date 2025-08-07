@@ -7,10 +7,10 @@
     // Vars
     --cmntr-btn-color:        var(--cmntr-link-color);
     --cmntr-btn-bg:           transparent;
-    --cmntr-btn-hover-color:  var(--cmntr-link-hover-color);
-    --cmntr-btn-hover-bg:     transparent;
+    --cmntr-btn-hover-color:  var(--cmntr-color);
+    --cmntr-btn-hover-bg:     #{colours.$cstm-cmntr-link-hover-color};
     --cmntr-btn-active-color: var(--cmntr-link-hover-color);
-    --cmntr-btn-active-bg:    transparent;
+    --cmntr-btn-active-bg:    #{colours.$cstm-cmntr-link-hover-color};
 
     color: var(--cmntr-btn-color);
     background-color: var(--cmntr-btn-bg);
@@ -22,17 +22,18 @@
     cursor: pointer;
     line-height: 20px;
     padding: 6px 12px;
-    border: 1px solid transparent;
-    border-radius: 0.15rem;
+    border: 0.1rem solid white;
+    border-radius: 1rem;
     margin: 5px;
     transition: color 0.4s, background-color 0.4s;
     white-space: nowrap;
 
     &:not(:disabled) {
         &:hover, &:focus, &:active {
-            color: var(--cmntr-btn-hover-color);
+            color: var(--cmntr-btn-hover-color) !important;
             background-color: var(--cmntr-btn-hover-bg);
             opacity: 1;
+            border-radius: 1rem;
         }
     }
 
@@ -44,6 +45,7 @@
     &:not(.comentario-btn-link):not(.comentario-btn-tool).comentario-btn-active {
         color: var(--cmntr-btn-active-color);
         background-color: var(--cmntr-btn-active-bg);
+        border-radius: 1rem;
         @include mixins.btn-active-shadow();
     }
 
@@ -53,6 +55,8 @@
 
     &.comentario-btn-link.comentario-btn-active {
         font-weight: bold;
+        border: 0;
+        border-radius: 1rem;
     }
 }
 
@@ -61,6 +65,8 @@
     line-height: 16px;
     padding: 3px 6px;
     margin: 2.5px;
+    border: 0;
+    border-radius: 1rem;
 }
 
 .comentario-submit-icon {
@@ -72,14 +78,14 @@
         --cmntr-btn-color:        #{$color};
         --cmntr-btn-bg:           #{$bg-color};
         --cmntr-btn-hover-color:  #{$color};
-        --cmntr-btn-hover-bg:     #{color.adjust($bg-color, $lightness: 15%)};
+        --cmntr-btn-hover-bg:     #{colours.$cstm-cmntr-accent-color};
         --cmntr-btn-active-color: #{$color};
-        --cmntr-btn-active-bg:    #{color.adjust($bg-color, $lightness: -15%)};
+        --cmntr-btn-active-bg:    #{color.adjust(colours.$cstm-cmntr-accent-color, $lightness: -10%)};
     }
 }
 
-@include make-btn("primary",   colours.$white, colours.$primary);
-@include make-btn("secondary", colours.$white, colours.$secondary);
+@include make-btn("primary",   colours.$white, colours.$black);
+@include make-btn("secondary", colours.$white, colours.$black);
 @include make-btn("dark",      colours.$white, colours.$dark);
 @include make-btn("danger",    colours.$white, colours.$red-8);
 @include make-btn("facebook",  colours.$white, #1877f2);

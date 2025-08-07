@@ -18,6 +18,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	gmhtml "github.com/yuin/goldmark/renderer/html"
 	"gitlab.com/comentario/comentario/internal/intf"
+	"gitlab.com/comentario/comentario/internal/util/custommd"
 	"golang.org/x/net/html"
 	"io"
 	"math/rand"
@@ -353,13 +354,19 @@ func LogError(f func() error, details string) {
 	}
 }
 
+func bmAllowClasses(p *bluemonday.Policy, element, class string, classes ...string) {
+	optionString := class + "|" + strings.Join(classes, "|")
+	p.AllowAttrs("class").Matching(regexp.MustCompile(`^(\s|` + optionString + `)+$`)).OnElements(element)
+}
+
 // MarkdownToHTML renders the provided markdown string as HTML
 func MarkdownToHTML(markdown string, links, images, tables bool) string {
 	// Create a new markdown parser/renderer
 	md := goldmark.New(
 		goldmark.WithExtensions(
 			extension.Strikethrough,
-			extension.DefinitionList),
+			extension.DefinitionList,
+			custommd.Spoiler),
 		goldmark.WithParserOptions(),
 		goldmark.WithRendererOptions(
 			gmhtml.WithHardWraps(),
@@ -369,6 +376,7 @@ func MarkdownToHTML(markdown string, links, images, tables bool) string {
 	// Create a sanitizer policy
 	p := bluemonday.StrictPolicy()
 	p.AllowStandardAttributes()
+	bmAllowClasses(p, "span", "comentario-spoiler")
 	p.AllowStandardURLs()
 	p.AllowElements(
 		// Headings

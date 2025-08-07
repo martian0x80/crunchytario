@@ -717,6 +717,7 @@ func TestMarkdownToHTML(t *testing.T) {
 	}{
 		{"Empty                  ", "", false, false, false, ""},
 		{"Bare text              ", "Foo", false, false, false, "<p>Foo</p>"},
+		{"Spoilers               ", "||spoiler||", false, false, false, "<p><span class=\"comentario-spoiler\">spoiler</span></p>"},
 		{"Line breaks            ", "Foo\nBar", false, false, false, "<p>Foo<br>\nBar</p>"},
 		{"Paragraphs             ", "Foo\n\nBar", false, false, false, "<p>Foo</p>\n<p>Bar</p>"},
 		{"Blockquote             ", "> This is\n> a blockquote", false, false, false, "<blockquote>\n<p>This is<br>\na blockquote</p>\n</blockquote>"},

@@ -337,4 +337,32 @@ export class Wrap<T extends HTMLElement | SVGElement> {
         const r = this.el?.getBoundingClientRect();
         return !!r && r.top >= 0 && r.bottom <= window.innerHeight;
     }
+
+    /**
+     * Find all descendants of the underlying element matching the given selector.
+     *
+     * Note:
+     *   Private as we cannot prefix the class names with 'comentario-', and it would make the API inconsistent.
+     *   Create more specific methods, and input the class names separately.
+     * @param selector
+     */
+    private selectAll(selector: string): Wrap<T>[] {
+        if (this.el) {
+            return Array.from(this.el.querySelectorAll(selector) ?? []).map(e => new Wrap(e as T));
+        }
+        return [];
+    }
+
+    /**
+     * Find all descendants of the underlying element with the given type and classes.
+     * @param type
+     * @param classes
+     */
+    selectByTypeAndClasses(type: string, ...classes: string[]): Wrap<T>[] {
+        return this.selectAll(
+            type + classes
+                .map(c => `.comentario-${c}`)
+                .join('')
+        );
+    }
 }

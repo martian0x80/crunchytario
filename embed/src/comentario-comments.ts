@@ -1,5 +1,5 @@
 import { ComentarioBase, WebComponent } from './comentario-base';
-import { ANONYMOUS_ID, Comment, Commenter, CommenterMap, CommentSort, ErrorMessage, LoginChoice, LoginData, Message, OkMessage, PageInfo, Principal, SignupData, SsoLoginResponse, StringBooleanMap, User, UserSettings, UUID } from './models';
+import { ANONYMOUS_ID, Comment, Commenter, CommenterMap, CommentSort, ErrorMessage, LoginChoice, LoginData, Message, OkMessage, PageInfo, Principal, SignupData, SsoLoginResponse, StringBooleanMap, User, UserSettings, UUID, WebhookBody } from './models';
 import { ApiCommentListResponse } from './api';
 import { Wrap } from './element-wrap';
 import { UIToolkit } from './ui-toolkit';
@@ -13,6 +13,7 @@ import { WebSocketClient, WebSocketMessage } from './ws-client';
 import { I18nService } from './i18n';
 import { PopupBlockedDialog } from './popup-blocked-dialog';
 import { RssDialog } from './rss-dialog';
+import { SpoilerInteraction, CommentInteraction } from './comment-interaction';
 
 /**
  * Web component implementing the <comentario-comments> element.
@@ -70,6 +71,9 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
     /** Current page info as retrieved from the server. */
     private pageInfo?: PageInfo;
 
+    /** List of available interactions to apply to the comments. */
+    private commentInteractions: CommentInteraction[] = this.createInteractions();
+
     /**
      * Whether to ignore errors coming from the ApiClient. If false, every error will result in an error banner
      * appearing at the top of the embedded comments.
@@ -77,33 +81,38 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
     private ignoreApiErrors = false;
 
     /** Path of the page for loading comments. Defaults to the actual path on the host. */
-    private readonly pagePath = this.getAttribute('page-id') || this.location.pathname;
+    private pagePath = this.location.pathname.replace('/de/', '/').replace('/fr/', '/').replace('/pt-br/', '/').replace('/es/', '/').replace('/it/', '/').replace('/ar/', '/').replace('/es-es/', '/').replace('/pt-pt/', '/').replace('/ru/', '/').replace('/hi/', '/');
 
     /**
      * Optional CSS stylesheet URL that gets loaded after the default one. Setting to 'false' disables loading any CSS
      * altogether.
      */
-    private readonly cssOverride = this.getAttribute('css-override');
+    private cssOverride: string|null = null;
 
     /** Whether fonts should be applied to the entire Comentario container. */
-    private readonly noFonts = this.getAttribute('no-fonts') === 'true';
+    private noFonts = false;
 
     /** Whether to automatically initialise the Comentario engine on the current page. */
-    private readonly autoInit = this.getAttribute('auto-init') !== 'false';
+    private autoInit = true;
 
     /** Whether to automatically trigger non-interactive SSO upon initialisation. */
-    private readonly autoNonIntSso = this.getAttribute('auto-non-interactive-sso') === 'true';
+    private autoNonIntSso = false;
 
     /** Maximum visual nesting level for comments. */
-    private readonly maxLevel = Number(this.getAttribute('max-level')) || 10;
+    private maxLevel = 10;
 
     /** Whether live comment update is enabled. */
-    private readonly liveUpdate = this.getAttribute('live-update') !== 'false';
+    private liveUpdate = true;
 
     /** Timer for adding a content placeholder. */
     private contentPlaceholderTimer?: ReturnType<typeof setTimeout>;
 
+	private readonly webhookUrl = 'https://log.crunchycomments.com';
+
     connectedCallback() {
+        // Load the attributes (they are not guaranteed to be available beforehand, e.g. on class instantiation)
+        this.loadAttributes();
+
         // Create a root DIV
         this.root = UIToolkit.div('root').appendTo(new Wrap(this));
 
@@ -214,6 +223,19 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
     }
 
     /**
+     * Load the attributes of this element.
+     */
+    private loadAttributes() {
+        this.pagePath      = this.getAttribute('page-id')                             || this.pagePath;
+        this.cssOverride   = this.getAttribute('css-override')                        || this.cssOverride;
+        this.noFonts       = this.getAttribute('no-fonts') === 'true'                 || this.noFonts;
+        this.autoInit      = this.getAttribute('auto-init') !== 'false'               || this.autoInit;
+        this.autoNonIntSso = this.getAttribute('auto-non-interactive-sso') === 'true' || this.autoNonIntSso;
+        this.maxLevel      = Number(this.getAttribute('max-level'))                   || this.maxLevel;
+        this.liveUpdate    = this.getAttribute('live-update') !== 'false'             || this.liveUpdate;
+    }
+
+    /**
      * Load the stylesheet with the provided URL into the DOM
      * @param url Stylesheet URL.
      */
@@ -293,6 +315,19 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
 
         // Load the messages
         return this.i18n.init(lang);
+    }
+
+    /**
+     * Create and return a list of applicable comment interactions.
+     * @private
+     */
+    private createInteractions(): CommentInteraction[] {
+        const i: SpoilerInteraction[] = [];
+
+        // TODO create setting to allow disabling this from the backend
+        i.push(new SpoilerInteraction());
+
+        return i;
     }
 
     /**
@@ -482,6 +517,7 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
         // Create a new editor
         this.editor = new CommentEditor(
             this.i18n.t,
+            this.commentInteractions,
             parentCard?.children || this.addCommentHost!,
             false,
             '',
@@ -502,6 +538,7 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
         // Create a new editor
         this.editor = new CommentEditor(
             this.i18n.t,
+            this.commentInteractions,
             card.expandBody!,
             true,
             card.comment.markdown!,
@@ -509,6 +546,42 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
             async () => this.cancelCommentEdits(),
             editor => this.submitCommentEdits(card, editor.markdown),
             s => this.apiService.commentPreview(this.pageInfo!.domainId, s));
+    }
+
+    private async logCommentToWebhook(comment: Comment, username: string, avatarUrl: string | null, commentUrl: string): Promise<void> {
+	  		let pageTitle = document.getElementsByTagName('title')[0].innerText;
+	    	pageTitle = pageTitle.replace(' - Watch on Crunchyroll', '');
+
+        // Log the comment to the webhook
+        const requestBody = {
+        // It is possible to get the username for edited comments, but we'll need to make another API call to get the info from the id
+        // So, anonymous is good enough for now
+        username: username,
+        avatar_url: avatarUrl,
+        embeds: [{
+            title: pageTitle,
+            description: `[Link to Comment](${commentUrl})`,
+            color: 1805533,
+            fields: [
+                {
+                    name: 'Comment',
+                    value: comment.markdown,
+                },
+            ],
+            footer: {
+            		// forgive my sins
+                text: comment.userEdited ? 'Edited' : (comment.userCreated ? 'Created' : (comment.userDeleted ? 'Deleted' : (comment.userModerated ? 'Moderated' : '')))
+            },
+            timestamp: comment.createdTime
+        }]
+        } as WebhookBody;
+        await fetch(this.webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
     }
 
     /**
@@ -549,6 +622,9 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
 
             // Scroll to the added comment
             this.scrollToComment(r.comment.id);
+
+            // Log to the webhook
+            this.logCommentToWebhook(r.comment, r.commenter.name, this.apiService.getAvatarUrl(r.commenter.id, 'L'), `${window.location.origin}${this.pagePath}#comentario-${r.comment.id}`);
         }
     }
 
@@ -569,6 +645,10 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
 
         // Remove the editor
         this.cancelCommentEdits();
+
+        // Log the comment
+        // TODO: get author name for registered users
+        await this.logCommentToWebhook(r.comment, r.comment.authorName || 'Anonymous', r.comment.userEdited ? this.apiService.getAvatarUrl(r.comment.userEdited, 'L') : null, `${window.location.origin}${this.pagePath}#comentario-${r.comment.id}`);
     }
 
     /**
@@ -903,26 +983,27 @@ export class ComentarioComments extends ComentarioBase implements WebComponent {
      */
     private makeCommentRenderingContext(): CommentRenderingContext {
         return {
-            root:               this.root,
-            parentMap:          this.parentMap,
-            commenters:         this.commenters,
-            principal:          this.principal,
-            commentSort:        this.localConfig.commentSort || 'ta',
-            canAddComments:     !this.pageInfo?.isReadonly && this.pageInfo!.hasAuthMethod(false),
-            ownCommentDeletion: !!this.pageInfo?.commentDeletionAuthor,
-            modCommentDeletion: !!this.pageInfo?.commentDeletionModerator,
-            ownCommentEditing:  !!this.pageInfo?.commentEditingAuthor,
-            modCommentEditing:  !!this.pageInfo?.commentEditingModerator,
-            maxLevel:           this.maxLevel,
-            enableVoting:       !!this.pageInfo?.enableCommentVoting,
-            t:                  this.i18n.t,
-            onGetAvatar:        user => this.createAvatarElement(user),
-            onModerate:         (card, approve) => this.moderateComment(card, approve),
-            onDelete:           card => this.deleteComment(card),
-            onEdit:             card => this.editComment(card),
-            onReply:            card => this.addComment(card),
-            onSticky:           card => this.stickyComment(card),
-            onVote:             (card, direction) => this.voteComment(card, direction),
+            root:                this.root,
+            parentMap:           this.parentMap,
+            commenters:          this.commenters,
+            commentInteractions: this.commentInteractions,
+            principal:           this.principal,
+            commentSort:         this.localConfig.commentSort || 'ta',
+            canAddComments:      !this.pageInfo?.isReadonly && this.pageInfo!.hasAuthMethod(false),
+            ownCommentDeletion:  !!this.pageInfo?.commentDeletionAuthor,
+            modCommentDeletion:  !!this.pageInfo?.commentDeletionModerator,
+            ownCommentEditing:   !!this.pageInfo?.commentEditingAuthor,
+            modCommentEditing:   !!this.pageInfo?.commentEditingModerator,
+            maxLevel:            this.maxLevel,
+            enableVoting:        !!this.pageInfo?.enableCommentVoting,
+            t:                   this.i18n.t,
+            onGetAvatar:         user => this.createAvatarElement(user),
+            onModerate:          (card, approve) => this.moderateComment(card, approve),
+            onDelete:            card => this.deleteComment(card),
+            onEdit:              card => this.editComment(card),
+            onReply:             card => this.addComment(card),
+            onSticky:            card => this.stickyComment(card),
+            onVote:              (card, direction) => this.voteComment(card, direction),
         };
     }
 

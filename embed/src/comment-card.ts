@@ -13,6 +13,7 @@ import {
 import { UIToolkit } from './ui-toolkit';
 import { Utils } from './utils';
 import { ConfirmDialog } from './confirm-dialog';
+import { CommentInteraction } from './comment-interaction';
 
 export type CommentCardEventHandler = (c: CommentCard) => void;
 export type CommentCardGetAvatarHandler = (user: User | undefined) => Wrap<any>;
@@ -169,6 +170,8 @@ export interface CommentRenderingContext {
     readonly parentMap: CommentParentMap;
     /** Map of known commenters. */
     readonly commenters: CommenterMap;
+    /** List of comment interactions. */
+    readonly commentInteractions: CommentInteraction[];
     /** Optional logged-in principal. */
     readonly principal?: Principal;
     /** Current sorting. */
@@ -235,6 +238,9 @@ export class CommentCard extends Wrap<HTMLDivElement> {
     /** Localisation function (mapped to the I18n service). */
     private readonly t: TranslateFunc;
 
+    /** List of enabled comment interactions. */
+    private readonly interactions: CommentInteraction[];
+
     constructor(
         private _comment: CommentWithCard,
         ctx: CommentRenderingContext,
@@ -243,6 +249,7 @@ export class CommentCard extends Wrap<HTMLDivElement> {
         super(UIToolkit.div().element);
         this._comment.card = this;
         this.t = ctx.t;
+        this.interactions = ctx.commentInteractions || [];
 
         // Render the content
         this.render(ctx);
@@ -622,5 +629,10 @@ export class CommentCard extends Wrap<HTMLDivElement> {
      */
     private updateText(html?: string) {
         this.eBody!.html(html || '');
+
+        // Reapply interactions to new content
+        for (const interaction of this.interactions) {
+            interaction.apply(this.eBody!, this.t);
+        }
     }
 }

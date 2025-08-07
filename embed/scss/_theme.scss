@@ -1,5 +1,10 @@
 @use "colours";
 
+/*
+/* Crunchyroll only has a dark mode, so we do we really need to support light mode?
+/* I think I am gonna stick with the current fixed theme we are using.
+*/
+
 @mixin theme-props($theme: light) {
     // Light theme properties
     @if $theme == light {
@@ -39,35 +44,39 @@
         --cmntr-pending-border:       #{colours.$yellow-6};
         --cmntr-table-border:         #{colours.$gray-3};
 
+        --cmntr-spoiler-hidden:       #{colours.$gray-3};
+        --cmntr-spoiler-hover:        #{colours.$gray-4};
+        --cmntr-spoiler-revealed:     #{colours.$gray-2};
+
     // Dark theme properties
     } @else {
         color-scheme: dark;
-        --cmntr-bg:                   #{colours.$gray-9};
-        --cmntr-bg-shade:             #{colours.$gray-8};
-        --cmntr-bg-highlight:         #{colours.$indigo-7};
+        --cmntr-bg:                   #{colours.$black};
+        --cmntr-bg-shade:             #{colours.$black};
+        --cmntr-bg-highlight:         #{colours.$cstm-cmntr-bg-highlight-color-10};
         --cmntr-bg-blink:             #{colours.$yellow-6};
         --cmntr-danger-bg:            #{colours.$red-9};
         --cmntr-deleted-bg:           #{colours.$pink-5};
-        --cmntr-dlg-header-bg:        #{colours.$gray-6};
-        --cmntr-input-bg:             #{colours.$gray-9};
+        --cmntr-dlg-header-bg:        #{colours.$gray-8};
+        --cmntr-input-bg:             #{colours.$black};
         --cmntr-pending-bg:           #{colours.$gray-7};
         --cmntr-placeholder-bg:       #{colours.$gray-6};
         --cmntr-rejected-bg:          #{colours.$yellow-8};
         --cmntr-success-bg:           #{colours.$green-8};
         --cmntr-warning-bg:           #{colours.$yellow-8};
 
-        --cmntr-color:                #{colours.$gray-1};
+        --cmntr-color:                #{colours.$cstm-cmntr-color};
         --cmntr-danger-color:         #{colours.$red-2};
         --cmntr-input-color:          #{colours.$gray-2};
         --cmntr-input-ph-color:       #{colours.$gray-4};
         --cmntr-input-disabled-color: #{colours.$gray-3};
         --cmntr-label-color:          #{colours.$gray-2};
-        --cmntr-link-color:           #{colours.$blue-3};
-        --cmntr-link-hover-color:     #{colours.$blue-6};
+        --cmntr-link-color:           #{colours.$cstm-cmntr-link-color};
+        --cmntr-link-hover-color:     #{colours.$cstm-cmntr-link-hover-color};
         --cmntr-muted-color:          #{colours.$gray-3};
         --cmntr-score-color:          #{colours.$gray-5};
-        --cmntr-score-up-color:       #{colours.$green-3};
-        --cmntr-score-down-color:     #{colours.$orange-3};
+        --cmntr-score-up-color:       #{colours.$cstm-cmntr-green-upvoted};
+        --cmntr-score-down-color:     #{colours.$cstm-cmntr-orange-downvoted};
         --cmntr-sticky-color:         #{colours.$yellow-5};
         --cmntr-success-color:        #{colours.$green-2};
         --cmntr-warning-color:        #{colours.$yellow-2};
@@ -76,5 +85,9 @@
         --cmntr-dlg-border:           #{colours.$gray-4};
         --cmntr-pending-border:       #{colours.$yellow-3};
         --cmntr-table-border:         #{colours.$gray-6};
+
+        --cmntr-spoiler-hidden:       #{colours.$gray-7};
+        --cmntr-spoiler-hover:        #{colours.$gray-6};
+        --cmntr-spoiler-revealed:     #{colours.$gray-8};
     }
 }
