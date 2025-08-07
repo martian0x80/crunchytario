@@ -454,6 +454,12 @@ context('Comment Editor', () => {
                 {in: 'zip\nrar', sel: [0, 7], want: '1. zip\n1. rar',                        wantSel: [3, 3],  wantHtml: '<ol><li>zip</li><li>rar</li></ol>'},
                 {in: 'zip\nrar', sel: [1, 5], want: '1. zip\n1. rar',                        wantSel: [4, 4],  wantHtml: '<ol><li>zip</li><li>rar</li></ol>'},
             ],
+            'Spoiler' : [
+                {in: '',         sel: [0],    want: '||text||',                              wantSel: [2, 6],  wantHtml: '<p><span class="comentario-spoiler" title="Spoiler (click to reveal)">text</span></p>'},
+                {in: 'foo',      sel: [0],    want: '||text||foo',                           wantSel: [2, 6],  wantHtml: '<p><span class="comentario-spoiler" title="Spoiler (click to reveal)">text</span>foo</p>'},
+                {in: 'foo',      sel: [2, 2], want: 'fo||text||o',                           wantSel: [4, 8],  wantHtml: '<p>fo<span class="comentario-spoiler" title="Spoiler (click to reveal)">text</span>o</p>'},
+                {in: 'foo',      sel: [0, 3], want: '||foo||',                               wantSel: [7, 7],  wantHtml: '<p><span class="comentario-spoiler" title="Spoiler (click to reveal)">foo</span></p>'},
+            ],
         };
 
         const visitAndEdit = () => {
@@ -473,7 +479,7 @@ context('Comment Editor', () => {
             const btns = [
                 'Bold (Ctrl+B)', 'Italic (Ctrl+I)', 'Strikethrough (Ctrl+Shift+X)', 'Link (Ctrl+K)',
                 'Quote (Ctrl+Shift+.)', 'Code (Ctrl+E)', 'Image', 'Table', 'Bullet list (Ctrl+Shift+8)',
-                'Numbered list (Ctrl+Shift+7)', 'Editor help'];
+                'Numbered list (Ctrl+Shift+7)', 'Spoiler (Ctrl+H)', 'Editor help',];
 
             /** Disable the given config value, visit the site and check the toolbar buttons. */
             const checkSetting = (key: string, hidesButton: string) => {

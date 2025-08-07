@@ -32,6 +32,8 @@
 - {id: actionUnsticky,              translation: 'Unsticky'}
 - {id: actionUnsubscribe,           translation: 'Unsubscribe'}
 - {id: actionUpvote,                translation: 'Upvote'}
+- {id: interactionRevealSpoiler,    translation: 'Spoiler (click to reveal)'}
+- {id: interactionHideSpoiler,      translation: 'Spoiler (click to hide)'}
 - {id: addCommentPlaceholder,       translation: 'Add a comment'}
 - {id: btnBold,                     translation: 'Bold'}
 - {id: btnBulletList,               translation: 'Bullet list'}
@@ -48,6 +50,7 @@
 - {id: btnStrikethrough,            translation: 'Strikethrough'}
 - {id: btnTable,                    translation: 'Table'}
 - {id: btnUnlock,                   translation: 'Unlock'}
+- {id: btnSpoiler,                  translation: 'Spoiler'}
 - {id: clickButtonBelow,            translation: 'To do that, please click the button below.'}
 - {id: commentCount,                translation: 'comment(s)'}
 - {id: commentIsApproved,           translation: 'This comment has been approved by a moderator.'}

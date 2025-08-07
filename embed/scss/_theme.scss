@@ -44,6 +44,10 @@
         --cmntr-pending-border:       #{colours.$yellow-6};
         --cmntr-table-border:         #{colours.$gray-3};
 
+        --cmntr-spoiler-hidden:       #{colours.$gray-3};
+        --cmntr-spoiler-hover:        #{colours.$gray-4};
+        --cmntr-spoiler-revealed:     #{colours.$gray-2};
+
     // Dark theme properties
     } @else {
         color-scheme: dark;
@@ -81,5 +85,9 @@
         --cmntr-dlg-border:           #{colours.$gray-4};
         --cmntr-pending-border:       #{colours.$yellow-3};
         --cmntr-table-border:         #{colours.$gray-6};
+
+        --cmntr-spoiler-hidden:       #{colours.$gray-7};
+        --cmntr-spoiler-hover:        #{colours.$gray-6};
+        --cmntr-spoiler-revealed:     #{colours.$gray-8};
     }
 }
